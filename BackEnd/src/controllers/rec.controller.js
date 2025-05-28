@@ -4,7 +4,10 @@ const RecService = require("../services/rec.service");
 const getAllRecs = {
     description: "Get list of all Rec",
     tags: ["api", "Rec"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["VETERINARIAN"],
+    },
     handler: async (Request, h) => {
         try {
             const rec = await RecService.getAllRecs();

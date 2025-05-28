@@ -7,12 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Project {
-  pId             Int        @id @default(autoincrement())
-  pName           String
-  pDescription    String
-}
-
 model Owners {
   owner_id        Int        @id @default(autoincrement())
   first_name      String   
@@ -21,12 +15,18 @@ model Owners {
   email           String     @unique
   address         String   
   pets            Pets[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model PetTypes {
   type_id         Int        @id @default(autoincrement()) 
   type_name       String
   pets            Pets[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Pets {
@@ -43,6 +43,9 @@ model Pets {
   type            PetTypes  @relation(fields: [type_id], references: [type_id])
 
   medicalRecords MedicalRecords[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model Veterinarians {
@@ -54,6 +57,10 @@ model Veterinarians {
 
   medicalRecords MedicalRecords[]
   appointments   Appointments[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+
 }
 
 model Users {
@@ -61,13 +68,17 @@ model Users {
   first_name    String
   last_name     String
   email         String       @unique
-  password_hash String
+  password      String
   phone         String
   role          UserRole
 
   veterinarian  Veterinarians? @relation(name: "UserVeterinarian")
   
   @@index([role])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  
 }
 
 enum UserRole {
@@ -94,6 +105,9 @@ model MedicalRecords {
   @@index([vet_id])
 
   appointments   Appointments[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model Appointments {
@@ -109,6 +123,10 @@ model Appointments {
 
   @@index([record_id])
   @@index([vet_id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+
 }
 
 enum AppointmentStatus {

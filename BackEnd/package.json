@@ -21,9 +21,10 @@
     "@hapi/joi": "^17.1.1",
     "@hapi/vision": "^7.0.3",
     "@prisma/client": "^6.8.2",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.5.0",
     "hapi-swagger": "^17.3.2",
-    "kanban-backend-service": "file:",
+    "jsonwebtoken": "^9.0.2",
     "nodemon": "^3.1.10",
     "zod": "^3.24.3"
   },
