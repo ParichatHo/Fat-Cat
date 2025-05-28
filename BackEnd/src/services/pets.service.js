@@ -2,8 +2,13 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const getAllPets = async () => {
-    return await prisma.pets.findMany();
-};
+    return await prisma.pets.findMany({
+      include: {
+        owner: true, // หรือถ้า relation ชื่ออื่นต้องแก้ตามจริง เช่น owner หรือ owner_info
+        type: true
+      }
+    });
+  };
 
 const getPetById = async (pet_id) => {
     return await prisma.pets.findUnique({ where: { pet_id: Number(pet_id) } });

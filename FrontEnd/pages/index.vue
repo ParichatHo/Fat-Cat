@@ -1,35 +1,25 @@
-<script setup lang="ts">
-import type { NavigationMenuItem } from '@nuxt/ui'
+<script setup>
 
-const route = useRoute()
+definePageMeta({
+  layout: 'navbar'
+})
 
-const items = computed<NavigationMenuItem[]>(() => [{
-  label: 'Home',
-  to: '/getting-started',
-  icon: 'i-lucide-home',
-},
-{
-  label: 'Appointment',
-  to: '/getting-started',
-  icon: 'i-lucide-calendar-clock',
-}])
+const { data: pets, error } = await useAsyncData('pets', () =>
+  $fetch('http://localhost:3001/pets')
+)
 </script>
 
 <template>
-  <UHeader toggle-side="left">
-    <template #title>
-    </template>
+  <div>
+    <h1>List of Pets</h1>
+    <ul>
+      <li v-for="pet in pets" :key="pet.pet_id">
+        {{ pet.pet_name }} - {{ pet.type?.type_name }} - {{ pet.breed_name }} - {{ pet.gender }} 
+        <br />
+        Owner: {{ pet.owner?.first_name }} {{ pet.owner?.last_name }}
+      </li>
 
-    <UNavigationMenu :items="items" />
-
-    <template #right>
-      <UColorModeButton />
-
-
-    </template>
-
-    <template #body>
-      <UNavigationMenu :items="items" orientation="vertical" class="-mx-2.5" />
-    </template>
-  </UHeader>
+    </ul>
+    <div v-if="error">Error loading pets.</div>
+  </div>
 </template>
