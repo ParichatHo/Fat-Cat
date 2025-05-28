@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Project {
+  pId             Int        @id @default(autoincrement())
+  pName           String
+  pDescription    String
+}
+
+model Owners {
+  owner_id        Int        @id @default(autoincrement())
+  first_name      String   
+  last_name       String 
+  phone           String 
+  email           String     @unique
+  address         String   
+  pets            Pets[]
+}
+
+model PetTypes {
+  type_id         Int        @id @default(autoincrement()) 
+  type_name       String
+  pets            Pets[]
+}
+
+model Pets {
+  pet_id          Int        @id @default(autoincrement()) 
+  pet_name        String
+  birth_date      DateTime
+  breed_name      String
+  gender          String
+
+  owner_id        Int
+  owner           Owners    @relation(fields: [owner_id], references: [owner_id])
+  
+  type_id         Int
+  type            PetTypes  @relation(fields: [type_id], references: [type_id])
+
+  medicalRecords MedicalRecords[]
+}
+
+model Veterinarians {
+  vet_id         Int      @id @default(autoincrement())
+  license_number String   @unique
+  
+  user_id        Int      @unique
+  user           Users    @relation(fields: [user_id], references: [user_id], name: "UserVeterinarian")
+
+  medicalRecords MedicalRecords[]
+  appointments   Appointments[]
+}
+
+model Users {
+  user_id       Int          @id @default(autoincrement())
+  first_name    String
+  last_name     String
+  email         String       @unique
+  password_hash String
+  phone         String
+  role          UserRole
+
+  veterinarian  Veterinarians? @relation(name: "UserVeterinarian")
+  
+  @@index([role])
+}
+
+enum UserRole {
+  VETERINARIAN
+  STAFF
+  ADMIN
+}
+
+model MedicalRecords {
+  record_id       Int      @id @default(autoincrement())
+  pet_id          Int
+  vet_id          Int
+  visit_date      DateTime
+  symptoms        String
+  diagnosis       String
+  treatment       String
+  medication      String
+  notes           String
+
+  pet          Pets           @relation(fields: [pet_id], references: [pet_id])
+  vet          Veterinarians  @relation(fields: [vet_id], references: [vet_id])
+
+  @@index([pet_id])
+  @@index([vet_id])
+
+  appointments   Appointments[]
+}
+
+model Appointments {
+  appointment_id   Int       @id @default(autoincrement())
+  record_id        Int
+  vet_id           Int
+  appointment_date DateTime
+  note             String?
+  status           AppointmentStatus
+
+  rec          MedicalRecords           @relation(fields: [record_id], references: [record_id])
+  vet          Veterinarians            @relation(fields: [vet_id], references: [vet_id])
+
+  @@index([record_id])
+  @@index([vet_id])
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
