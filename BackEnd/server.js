@@ -12,7 +12,8 @@ const init = async () => {
     routes: {
       cors: {
         origin: ['http://localhost:3000'], // อนุญาตเฉพาะเว็บนี้
-        additionalHeaders: ['cache-control', 'x-requested-with']
+        additionalHeaders: ['cache-control', 'x-requested-with'],
+        credentials: true  // เพิ่มบรรทัดนี้เพื่ออนุญาตส่ง cookie และ credentials
       },
       validate: {
         failAction: async (request, h, err) => {
@@ -21,6 +22,7 @@ const init = async () => {
       }
     }
   });
+
 
   await server.register(prismaPlugin);
   // Register the Prisma plugin to make it available in the server context

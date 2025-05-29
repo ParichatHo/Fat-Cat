@@ -40,7 +40,7 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-  async function onSubmit(payload: FormSubmitEvent<Schema>) {
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
     const response = await $fetch<LoginResponse>("http://localhost:3001/auth/login", {
       method: "POST",
@@ -52,13 +52,13 @@ type Schema = z.output<typeof schema>;
       localStorage.setItem("user", JSON.stringify(response.user));
 
       if (response.user.role === "STAFF") {
-        router.push("/staff");
+        // เปลี่ยน push เป็น replace
+        router.replace("/pet");
       } else {
-        //alert("You do not have permission to access this page.");
-        // หรือจะพาไปหน้าอื่นก็ได้ เช่น หน้า homepage
-        router.push("/admin");
+        router.replace("/admin");
       }
     }
+
   } catch (error: any) {
     alert(error?.data?.message || "Invalid email or password");
   }
@@ -69,21 +69,13 @@ type Schema = z.output<typeof schema>;
 <template>
   <div class="flex items-center justify-center min-h-screen p-4">
     <UPageCard class="w-full max-w-md">
-      <UAuthForm
-        :schema="schema"
-        :fields="fields"
-        title="Login"
-        icon="i-lucide-user"
-        @submit="onSubmit"
-      >
+      <UAuthForm :schema="schema" :fields="fields" title="Login" icon="i-lucide-user" @submit="onSubmit">
         <template #description>
           Don't have an account?
           <ULink to="/auth/register" class="text-primary font-medium">Sign up</ULink>.
         </template>
         <template #password-hint>
-          <ULink to="/auth/forgot-password" class="text-primary font-medium" tabindex="-1"
-            >Forgot password?</ULink
-          >
+          <ULink to="/auth/forgot-password" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
         </template>
         <template #footer>
           By signing in, you agree to our
