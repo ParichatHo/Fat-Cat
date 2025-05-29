@@ -1,25 +1,95 @@
-<script setup>
+<script setup lang="ts">
+import * as z from "zod";
+import type { FormSubmitEvent } from "@nuxt/ui";
+import { useRouter } from "vue-router";
 
-definePageMeta({
-  layout: 'navbar'
-})
+// Define interface for API response
+interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  };
+}
 
-const { data: pets, error } = await useAsyncData('pets', () =>
-  $fetch('http://localhost:3001/pets')
-)
+const router = useRouter();
+
+const fields = [
+  {
+    name: "email",
+    type: "text" as const,
+    label: "Email",
+    placeholder: "Enter your email",
+    required: true,
+  },
+  {
+    name: "password",
+    label: "Password",
+    type: "password" as const,
+    placeholder: "Enter your password",
+  },
+];
+
+const schema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Must be at least 6 characters"),
+});
+
+type Schema = z.output<typeof schema>;
+
+  async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  try {
+    const response = await $fetch<LoginResponse>("http://localhost:3001/auth/login", {
+      method: "POST",
+      body: payload.data,
+    });
+
+    if (response.token) {
+      localStorage.setItem("authToken", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+
+      if (response.user.role === "STAFF") {
+        router.push("/staff");
+      } else {
+        //alert("You do not have permission to access this page.");
+        // หรือจะพาไปหน้าอื่นก็ได้ เช่น หน้า homepage
+        router.push("/admin");
+      }
+    }
+  } catch (error: any) {
+    alert(error?.data?.message || "Invalid email or password");
+  }
+}
+
 </script>
 
 <template>
-  <div>
-    <h1>List of Pets</h1>
-    <ul>
-      <li v-for="pet in pets" :key="pet.pet_id">
-        {{ pet.pet_name }} - {{ pet.type?.type_name }} - {{ pet.breed_name }} - {{ pet.gender }} 
-        <br />
-        Owner: {{ pet.owner?.first_name }} {{ pet.owner?.last_name }}
-      </li>
-
-    </ul>
-    <div v-if="error">Error loading pets.</div>
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <UPageCard class="w-full max-w-md">
+      <UAuthForm
+        :schema="schema"
+        :fields="fields"
+        title="Login"
+        icon="i-lucide-user"
+        @submit="onSubmit"
+      >
+        <template #description>
+          Don't have an account?
+          <ULink to="/auth/register" class="text-primary font-medium">Sign up</ULink>.
+        </template>
+        <template #password-hint>
+          <ULink to="/auth/forgot-password" class="text-primary font-medium" tabindex="-1"
+            >Forgot password?</ULink
+          >
+        </template>
+        <template #footer>
+          By signing in, you agree to our
+          <ULink to="/terms" class="text-primary font-medium">Terms of Service</ULink>.
+        </template>
+      </UAuthForm>
+    </UPageCard>
   </div>
 </template>

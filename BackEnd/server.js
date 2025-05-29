@@ -10,6 +10,10 @@ const init = async () => {
     port: process.env.PORT || 3001,
     host: 'localhost',
     routes: {
+      cors: {
+        origin: ['http://localhost:3000'], // อนุญาตเฉพาะเว็บนี้
+        additionalHeaders: ['cache-control', 'x-requested-with']
+      },
       validate: {
         failAction: async (request, h, err) => {
           throw err; // Show detailed validation errors during development
