@@ -4,7 +4,10 @@ const userService = require("../services/users.service");
 const getAllUsers = {
     description: "Get list of all users",
     tags: ["api", "users"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (Request, h) => {
         try {
             const users = await userService.getAllUsers();
@@ -20,7 +23,10 @@ const getAllUsers = {
 const getUserById = {
     description: "Get list of all users",
     tags: ["api", "users"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { user_id } = request.params;
         try {
@@ -42,7 +48,10 @@ const getUserById = {
 const createUser = {
     description: "Create new users",
     tags: ["api", "users"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         try {
             const newuser = await userService.createUser(request.payload);
@@ -58,7 +67,10 @@ const createUser = {
 const updateUser = {
     description: "Update users by user_id",
     tags: ["api", "users"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { user_id } = request.params;
         try {
@@ -76,24 +88,27 @@ const updateUser = {
 
 //   Delete users
 const deleteUser = {
-  description: "Delete users by user_id",
-  tags: ["api", "users"],
-  auth: false,
-  handler: async (request, h) => {
-    const { user_id } = request.params;
-    try {
-      const users = await userService.getUserById(Number(user_id));
+    description: "Delete users by user_id",
+    tags: ["api", "users"],
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
+    handler: async (request, h) => {
+        const { user_id } = request.params;
+        try {
+            const users = await userService.getUserById(Number(user_id));
 
-      if (!users) {
-        return h.response({ message: "user not found" }).code(404);
-      }
-      await userService.deleteUser(Number(user_id));
-      return h.response({ message: "user deleted successfully" }).code(200);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      return h.response({ message: "Failed to delete users" }).code(500);
-    }
-  },
+            if (!users) {
+                return h.response({ message: "user not found" }).code(404);
+            }
+            await userService.deleteUser(Number(user_id));
+            return h.response({ message: "user deleted successfully" }).code(200);
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            return h.response({ message: "Failed to delete users" }).code(500);
+        }
+    },
 };
 
 module.exports = {

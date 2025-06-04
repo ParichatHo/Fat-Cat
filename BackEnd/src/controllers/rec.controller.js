@@ -4,10 +4,7 @@ const RecService = require("../services/rec.service");
 const getAllRecs = {
     description: "Get list of all Rec",
     tags: ["api", "Rec"],
-    auth: {
-        strategy: "jwt",
-        scope: ["VETERINARIAN"],
-    },
+    auth: false,
     handler: async (Request, h) => {
         try {
             const rec = await RecService.getAllRecs();
@@ -45,7 +42,10 @@ const getRecById = {
 const createRec = {
     description: "Create new Rec",
     tags: ["api", "Rec"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["VETERINARIAN"],
+    },
     handler: async (request, h) => {
         try {
             const newRec = await RecService.createRec(request.payload);
@@ -61,7 +61,10 @@ const createRec = {
 const updateRec = {
     description: "Update Rec by record_id",
     tags: ["api", "Rec"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["VETERINARIAN"],
+    },
     handler: async (request, h) => {
         const { record_id } = request.params;
         try {

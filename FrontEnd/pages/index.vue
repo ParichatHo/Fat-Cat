@@ -60,7 +60,7 @@ type Schema = z.output<typeof schema>;
       if (user.role === "STAFF") {
         router.replace("/pet");
       } else {
-        router.replace("/admin");
+        router.replace("/medicalRecord");
       }
     }
 

@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "@nuxt/ui-pro";
 
-/* @theme default {
+@theme default {
+    --font-sans: 'Public Sans', sans-serif;
     --color-primary: var(--ui-primary);
     --color-primary-50: var(--ui-color-primary-50);
     --color-primary-100: var(--ui-color-primary-100);
@@ -86,6 +87,6 @@
     --color-neutral-900: var(--ui-color-neutral-900);
     --color-neutral-950: var(--ui-color-neutral-950);
   }
-   */
+
 
 

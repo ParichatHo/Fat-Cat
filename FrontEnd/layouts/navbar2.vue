@@ -55,24 +55,9 @@ const items = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-home',
   },
   {
-    label: 'Appointment',
-    to: '/appointment',
+    label: 'MedicalRecord',
+    to: '/medicalRecord',
     icon: 'i-lucide-calendar-clock',
-  },
-  {
-    label: 'Customer',
-    to: '/customer',
-    icon: 'i-lucide-users',
-  },
-  {
-    label: 'Pet',
-    to: '/pet',
-    icon: 'i-lucide-paw-print',
-  },
-  {
-    label: 'User',
-    to: '/users',
-    icon: 'i-lucide-user-pen',
   },
 ])
 
@@ -98,8 +83,12 @@ function logout() {
     <template #right>
       <div class="flex items-center space-x-4">
         <UColorModeButton />
-        <UUser :name="userName" :description="userRole" :avatar="{ src: userAvatar }"
-          :chip="{ color: 'primary', position: 'top-right' }" />
+        <UUser
+          :name="userName"
+          :description="userRole"
+          :avatar="{ src: userAvatar }"
+          :chip="{ color: 'primary', position: 'top-right' }"
+        />
         <UButton size="md" color="neutral" variant="outline" @click="logout">
           Logout
         </UButton>

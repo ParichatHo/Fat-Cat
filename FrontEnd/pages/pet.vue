@@ -22,7 +22,7 @@ onMounted(() => {
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">List of Pets</h1>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">List of Pets</h1>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
       <div v-for="pet in pets" :key="pet.pet_id"
         class="border rounded-lg shadow p-4 hover:shadow-lg transition-shadow duration-300">
