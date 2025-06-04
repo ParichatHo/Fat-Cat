@@ -72,6 +72,7 @@ const userInfo = {
 
       return h.response({
         full_name: `${userRecord.first_name} ${userRecord.last_name}`,
+        role: `${userRecord.role}`,
         // เพิ่มข้อมูลอื่น ๆ ถ้าต้องการ
       }).code(200);
 
