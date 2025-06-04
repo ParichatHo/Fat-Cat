@@ -29,9 +29,9 @@ const login = {
 
       const safeUser = {
         id: userRecord.id,
-        firstName: userRecord.first_name,
-        lastName: userRecord.last_name,
-        email: userRecord.email,
+        // firstName: userRecord.first_name,
+        // lastName: userRecord.last_name,
+        // email: userRecord.email,
         role: userRecord.role
       };
       return h.response({ token, user: safeUser }).code(200)

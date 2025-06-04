@@ -9,7 +9,5 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
   },
   css: ['@/assets/css/main.css'],
-  modules: ['@nuxt/ui-pro'],
-
-  
+  modules: ['@nuxt/ui-pro']
 });

@@ -4,7 +4,10 @@ const ownerService = require("../services/owner.service");
 const getAllOwners = {
     description: "Get list of all owner",
     tags: ["api", "owner"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (Request, h) => {
         try {
             const owner = await ownerService.getAllOwners();
@@ -20,7 +23,10 @@ const getAllOwners = {
 const getOwnerById = {
     description: "Get list of all owner",
     tags: ["api", "owner"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { owner_id } = request.params;
         try {
@@ -42,7 +48,10 @@ const getOwnerById = {
 const createOwner = {
     description: "Create new Owner",
     tags: ["api", "owner"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         try {
             const newOwner = await ownerService.createOwner(request.payload);
@@ -58,7 +67,10 @@ const createOwner = {
 const updateOwner = {
     description: "Update owner by owner_id",
     tags: ["api", "owner"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { owner_id } = request.params;
         try {
@@ -78,7 +90,10 @@ const updateOwner = {
 const deleteOwner = {
   description: "Delete owner by owner_id",
   tags: ["api", "owner"],
-  auth: false,
+  auth: {
+    strategy: "jwt",
+    scope: ["STAFF"],
+},
   handler: async (request, h) => {
     const { owner_id } = request.params;
     try {
