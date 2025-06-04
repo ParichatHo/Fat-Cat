@@ -6,6 +6,13 @@ definePageMeta({
   middleware: 'auth'
 })
 
+onMounted(() => {
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    return navigateTo('/')
+  }
+})
+
 const { data: owners, error, refresh } = await useAsyncData('owners', () =>
   $fetch('http://localhost:3001/owners')
 )

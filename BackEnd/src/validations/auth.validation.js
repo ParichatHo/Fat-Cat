@@ -5,4 +5,11 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-module.exports = { loginSchema };
+const userInfoSchema = z.object({
+  email: z.string().email(),
+});
+
+module.exports = { 
+  loginSchema,
+  userInfoSchema
+};

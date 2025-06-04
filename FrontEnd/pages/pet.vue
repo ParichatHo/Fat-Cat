@@ -1,4 +1,5 @@
 <script setup>
+
 definePageMeta({
   layout: 'navbar',
   middleware: 'auth'
@@ -10,25 +11,10 @@ const { data: pets, error } = await useAsyncData('pets', () =>
   })
 )
 
-import { ref, onMounted } from 'vue'
-
-// reactive ตัวแปรเก็บ user
-const user = ref(null)
-
 onMounted(() => {
-  console.log('user', user.value)
-  if (process.client) {
-    const userStr = localStorage.getItem('user')
-    console.log('localStorage user:', userStr)  // debug
-    if (userStr) {
-      try {
-        user.value = JSON.parse(userStr)
-        console.log('parsed user:', user.value)  // debug
-      } catch (e) {
-        console.error('Failed to parse user JSON', e)
-        user.value = null
-      }
-    }
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    return navigateTo('/')
   }
 })
 
@@ -36,18 +22,6 @@ onMounted(() => {
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <!-- แสดงชื่อและ role ของผู้ที่ล็อกอิน -->
-    <div class="mb-6 text-right text-gray-700">
-      <span v-if="user">
-        Logged in as: <strong>{{ user.firstName }} {{ user.lastName }}</strong>
-        (Role: <em>{{ user.role }}</em>)
-      </span>
-
-      <span v-else>
-        Not logged in
-      </span>
-    </div>
-
     <h1 class="text-2xl font-bold mb-6">List of Pets</h1>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
       <div v-for="pet in pets" :key="pet.pet_id"

@@ -40,19 +40,24 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
     const response = await $fetch<LoginResponse>("http://localhost:3001/auth/login", {
       method: "POST",
       body: payload.data,
     });
 
-    if (response.token) {
-      localStorage.setItem("authToken", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+    // เข้าถึง token และ user จาก response โดยตรง
+    const token = response.token;
+    const user = response.user;
 
-      if (response.user.role === "STAFF") {
-        // เปลี่ยน push เป็น replace
+    console.log('Login token:', token);  // ดู token ใน console
+
+    if (token) {
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      if (user.role === "STAFF") {
         router.replace("/pet");
       } else {
         router.replace("/admin");
@@ -63,7 +68,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     alert(error?.data?.message || "Invalid email or password");
   }
 }
-
 </script>
 
 <template>
