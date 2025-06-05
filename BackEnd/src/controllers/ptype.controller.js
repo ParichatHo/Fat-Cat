@@ -3,14 +3,17 @@ const ptypeService = require("../services/ptype.service");
 const getAllPtypes = {
     description: "Get list of all pet types",
     tags: ["api", "pType"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (Request, h) => {
         try {
             const ptype = await ptypeService.getAllPtypes();
             return h.response(ptype).code(200);
         } catch (error) {
             console.error("Error fetching pet type:", error);
-            return h.response({ message: "Failed to fetch Pet Types"}).code(500);
+            return h.response({ message: "Failed to fetch Pet Types" }).code(500);
         }
     },
 };
@@ -19,7 +22,10 @@ const getAllPtypes = {
 const getPtypeById = {
     description: "Get list of all ptype",
     tags: ["api", "ptype"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { type_id } = request.params;
         try {
@@ -41,7 +47,10 @@ const getPtypeById = {
 const createPtype = {
     description: "Create new pet type",
     tags: ["api", "ptype"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         try {
             const newPtype = await ptypeService.createPtype(request.payload);
@@ -57,7 +66,10 @@ const createPtype = {
 const updatePtype = {
     description: "Update ptype by ptype_id",
     tags: ["api", "ptype"],
-    auth: false,
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
     handler: async (request, h) => {
         const { type_id } = request.params;
         try {
@@ -75,24 +87,27 @@ const updatePtype = {
 
 //   Delete pet type
 const deletePtype = {
-  description: "Delete pet type by type_id",
-  tags: ["api", "ptype"],
-  auth: false,
-  handler: async (request, h) => {
-    const { type_id } = request.params;
-    try {
-      const ptype = await ptypeService.getPtypeById(Number(type_id));
+    description: "Delete pet type by type_id",
+    tags: ["api", "ptype"],
+    auth: {
+        strategy: "jwt",
+        scope: ["STAFF"],
+    },
+    handler: async (request, h) => {
+        const { type_id } = request.params;
+        try {
+            const ptype = await ptypeService.getPtypeById(Number(type_id));
 
-      if (!ptype) {
-        return h.response({ message: "ptype not found" }).code(404);
-      }
-      await ptypeService.deletePtype(Number(type_id));
-      return h.response({ message: "pet type deleted successfully" }).code(200);
-    } catch (error) {
-      console.error("Error deleting ptype:", error);
-      return h.response({ message: "Failed to delete pet type" }).code(500);
-    }
-  },
+            if (!ptype) {
+                return h.response({ message: "ptype not found" }).code(404);
+            }
+            await ptypeService.deletePtype(Number(type_id));
+            return h.response({ message: "pet type deleted successfully" }).code(200);
+        } catch (error) {
+            console.error("Error deleting ptype:", error);
+            return h.response({ message: "Failed to delete pet type" }).code(500);
+        }
+    },
 };
 
 module.exports = {

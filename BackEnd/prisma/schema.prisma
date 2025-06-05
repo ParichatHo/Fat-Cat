@@ -1,133 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model Owners {
-  owner_id        Int        @id @default(autoincrement())
-  first_name      String   
-  last_name       String 
-  phone           String 
-  email           String     @unique
-  address         String   
-  pets            Pets[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
+  owner_id   Int       @id @default(autoincrement())
+  first_name String
+  last_name  String
+  phone      String
+  email      String    @unique
+  address    String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
+  pets       Pets[]
 }
 
 model PetTypes {
-  type_id         Int        @id @default(autoincrement()) 
-  type_name       String
-  pets            Pets[]
-  
+  type_id   Int      @id @default(autoincrement())
+  type_name String
+  description String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  pets      Pets[]
 }
 
 model Pets {
-  pet_id          Int        @id @default(autoincrement()) 
-  pet_name        String
-  birth_date      DateTime
-  breed_name      String
-  gender          String
-
-  owner_id        Int
-  owner           Owners    @relation(fields: [owner_id], references: [owner_id])
-  
-  type_id         Int
-  type            PetTypes  @relation(fields: [type_id], references: [type_id])
-
+  pet_id         Int              @id @default(autoincrement())
+  pet_name       String
+  birth_date     DateTime
+  breed_name     String
+  gender         String
+  owner_id       Int
+  type_id        Int
+  image_url      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?        @updatedAt
   medicalRecords MedicalRecords[]
-  image_url       String?  
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
+  owner          Owners           @relation(fields: [owner_id], references: [owner_id])
+  type           PetTypes         @relation(fields: [type_id], references: [type_id])
 }
 
 model Veterinarians {
-  vet_id         Int      @id @default(autoincrement())
-  license_number String   @unique
-  
-  user_id        Int      @unique
-  user           Users    @relation(fields: [user_id], references: [user_id], name: "UserVeterinarian")
-
-  medicalRecords MedicalRecords[]
+  vet_id         Int              @id @default(autoincrement())
+  license_number String           @unique
+  user_id        Int              @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?        @updatedAt
   appointments   Appointments[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-
+  medicalRecords MedicalRecords[]
+  user           Users            @relation("UserVeterinarian", fields: [user_id], references: [user_id])
 }
 
 model Users {
-  user_id       Int          @id @default(autoincrement())
-  first_name    String
-  last_name     String
-  email         String       @unique
-  password      String
-  phone         String
-  role          UserRole
+  user_id      Int            @id @default(autoincrement())
+  first_name   String
+  last_name    String
+  email        String         @unique
+  password     String
+  phone        String
+  role         UserRole
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime?      @updatedAt
+  veterinarian Veterinarians? @relation("UserVeterinarian")
 
-  veterinarian  Veterinarians? @relation(name: "UserVeterinarian")
-  
   @@index([role])
+}
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-  
+model MedicalRecords {
+  record_id    Int            @id @default(autoincrement())
+  pet_id       Int
+  vet_id       Int
+  visit_date   DateTime
+  symptoms     String
+  diagnosis    String
+  treatment    String
+  medication   String
+  notes        String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime?      @updatedAt
+  appointments Appointments[]
+  pet          Pets           @relation(fields: [pet_id], references: [pet_id])
+  vet          Veterinarians  @relation(fields: [vet_id], references: [vet_id])
+
+  @@index([pet_id])
+  @@index([vet_id])
+}
+
+model Appointments {
+  appointment_id   Int               @id @default(autoincrement())
+  record_id        Int
+  vet_id           Int
+  appointment_date DateTime
+  note             String?
+  status           AppointmentStatus
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime?         @updatedAt
+  rec              MedicalRecords    @relation(fields: [record_id], references: [record_id])
+  vet              Veterinarians     @relation(fields: [vet_id], references: [vet_id])
+
+  @@index([record_id])
+  @@index([vet_id])
 }
 
 enum UserRole {
   VETERINARIAN
   STAFF
   ADMIN
-}
-
-model MedicalRecords {
-  record_id       Int      @id @default(autoincrement())
-  pet_id          Int
-  vet_id          Int
-  visit_date      DateTime
-  symptoms        String
-  diagnosis       String
-  treatment       String
-  medication      String
-  notes           String
-
-  pet          Pets           @relation(fields: [pet_id], references: [pet_id])
-  vet          Veterinarians  @relation(fields: [vet_id], references: [vet_id])
-
-  @@index([pet_id])
-  @@index([vet_id])
-
-  appointments   Appointments[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-}
-
-model Appointments {
-  appointment_id   Int       @id @default(autoincrement())
-  record_id        Int
-  vet_id           Int
-  appointment_date DateTime
-  note             String?
-  status           AppointmentStatus
-
-  rec          MedicalRecords           @relation(fields: [record_id], references: [record_id])
-  vet          Veterinarians            @relation(fields: [vet_id], references: [vet_id])
-
-  @@index([record_id])
-  @@index([vet_id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-
 }
 
 enum AppointmentStatus {

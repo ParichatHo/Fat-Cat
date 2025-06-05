@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { BreadcrumbItem } from '@nuxt/ui'
+import Swal from 'sweetalert2'
 
 // Breadcrumb with icons
 const items = ref<BreadcrumbItem[]>([
@@ -55,6 +56,16 @@ async function submitForm() {
     })
 
     success.value = true
+
+    // แสดง Swal
+    await Swal.fire({
+      title: "Success!",
+      text: "Customer has been created.",
+      icon: "success",
+      confirmButtonText: "OK",
+      confirmButtonColor: "#00C16A"
+    })
+
     form.value = { first_name: '', last_name: '', phone: '', email: '', address: '' }
     navigateTo('/customer')
   } catch (err: any) {
@@ -63,6 +74,7 @@ async function submitForm() {
     loading.value = false
   }
 }
+
 
 type FormError = { name: string; message: string }
 
@@ -79,11 +91,11 @@ const validate = (state: any): FormError[] => {
 
 <template>
   <div class="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
-    <div class="w-full max-w-lg space-y-6">
+    <div class="w-full max-w-xl space-y-6">
+      <h1 class="text-lg font-semibold text-gray-900 mb-2">Customers List</h1>
       <!-- Breadcrumb with icons -->
       <UBreadcrumb :items="items">
       </UBreadcrumb>
-
 
       <!-- Form Card -->
       <UPageCard title="Create New Customer"
