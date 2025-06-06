@@ -5,7 +5,7 @@ import Swal from 'sweetalert2'
 
 // Breadcrumb with icons
 const items = ref<BreadcrumbItem[]>([
-  { label: 'Customer', icon: 'i-lucide-users', to: '/customer' },
+  { label: 'Customers', icon: 'i-lucide-users', to: '/customer' },
   { label: 'Create New Customer', icon: 'i-lucide-user-plus', to: '/customer/create' }
 ])
 
@@ -90,9 +90,9 @@ const validate = (state: any): FormError[] => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
-    <div class="w-full max-w-xl space-y-6">
-      <h1 class="text-lg font-semibold text-gray-900 mb-2">Customers List</h1>
+  <div class="p-6 mx-auto" style="max-width: 750px;">
+    <div class="space-y-6">
+      <h1 class="text-xl font-semibold text-gray-900 mb-5">Create New Customer</h1>
       <!-- Breadcrumb with icons -->
       <UBreadcrumb :items="items">
       </UBreadcrumb>
@@ -101,22 +101,30 @@ const validate = (state: any): FormError[] => {
       <UPageCard title="Create New Customer"
         description="Add a new customer to the system by filling out the form below.">
         <UForm :state="form" :validate="validate" @submit.prevent="submitForm" class="space-y-4">
-          <UFormField label="First Name" name="first_name" required>
-            <UInput v-model="form.first_name" placeholder="Enter your first name" class="w-full" />
-          </UFormField>
 
-          <UFormField label="Last Name" name="last_name" required>
-            <UInput v-model="form.last_name" placeholder="Enter your last name" class="w-full" />
-          </UFormField>
+          <!-- First Name + Last Name -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UFormField label="First Name" name="first_name" required>
+              <UInput v-model="form.first_name" placeholder="Enter your first name" class="w-full" />
+            </UFormField>
 
-          <UFormField label="Phone" name="phone" required>
-            <UInput v-model="form.phone" placeholder="Enter your phone number" class="w-full" />
-          </UFormField>
+            <UFormField label="Last Name" name="last_name" required>
+              <UInput v-model="form.last_name" placeholder="Enter your last name" class="w-full" />
+            </UFormField>
+          </div>
 
-          <UFormField label="Email" name="email" required>
-            <UInput v-model="form.email" placeholder="Enter your email" type="email" class="w-full" />
-          </UFormField>
+          <!-- Phone + Email -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UFormField label="Phone" name="phone" required>
+              <UInput v-model="form.phone" placeholder="Enter your phone number" class="w-full" />
+            </UFormField>
 
+            <UFormField label="Email" name="email" required>
+              <UInput v-model="form.email" placeholder="Enter your email" type="email" class="w-full" />
+            </UFormField>
+          </div>
+
+          <!-- Address -->
           <UFormField label="Address" name="address" required>
             <UTextarea v-model="form.address" placeholder="Enter your address" class="w-full" />
           </UFormField>
@@ -129,6 +137,7 @@ const validate = (state: any): FormError[] => {
           <div v-if="success" class="text-green-600 text-sm font-medium">Customer created successfully!</div>
         </UForm>
       </UPageCard>
+
     </div>
   </div>
 </template>

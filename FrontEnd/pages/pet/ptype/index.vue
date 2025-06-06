@@ -145,7 +145,7 @@ onMounted(async () => {
 <template>
     <div class="p-6 mx-auto" style="max-width: 750px;">
 
-        <h1 class="text-2xl font-semibold text-gray-900 mb-6">Pet Types</h1>
+        <h1 class="text-xl font-semibold text-gray-900 mb-5">Pet Types</h1>
         <!-- Breadcrumb -->
         <UBreadcrumb :items="items" class="mb-6" />
         <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">

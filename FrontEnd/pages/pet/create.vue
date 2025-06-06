@@ -186,7 +186,7 @@ function handleFileChange(event: Event) {
 <template>
     <div class="p-6 mx-auto" style="max-width: 750px;">
         <div class="space-y-6">
-            <h1 class="text-2xl font-semibold text-gray-900 mb-2">Add New Pet</h1>
+            <h1 class="text-xl font-semibold text-gray-900 mb-5">Add New Pet</h1>
             <UBreadcrumb :items="items" />
             <UPageCard title="Add New Pet" description="Fill in the form to add a new pet">
                 <form @submit.prevent="submitForm" class="space-y-4">

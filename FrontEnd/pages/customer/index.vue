@@ -157,7 +157,7 @@ function onDropdownSelect(item: DropdownMenuItem) {
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Customers List</h1>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Customers</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
       Failed to load customers data: {{ error }}

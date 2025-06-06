@@ -13,7 +13,7 @@ const route = useRoute()
 const customerId = route.params.id as string
 
 const items = ref<BreadcrumbItem[]>([
-  { label: 'Customer', icon: 'i-lucide-users', to: '/customer' },
+  { label: 'Customers', icon: 'i-lucide-users', to: '/customer' },
   { label: 'Edit Customer', icon: 'i-lucide-user-check', to: `/customer/edit/${customerId}` }
 ])
 
@@ -131,41 +131,53 @@ async function submitForm() {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
-    <div class="w-full max-w-xl space-y-6">
-      <h1 class="text-lg font-semibold text-gray-900 mb-2">Customers List</h1>
+  <div class="p-6 mx-auto" style="max-width: 750px;">
+    <div class="space-y-6">
+      <h1 class="text-xl font-semibold text-gray-900 mb-5">Edit Customer</h1>
       <UBreadcrumb :items="items" />
 
       <UPageCard title="Edit Customer" description="Update customer details below.">
         <div v-if="loading" class="text-center py-10 text-gray-500">Loading customer data...</div>
         <div v-else>
           <UForm :state="customer" :validate="validate" @submit.prevent="submitForm" class="space-y-4">
-            <UFormField label="First Name" name="first_name" required>
-              <UInput v-model="customer.first_name" placeholder="Enter first name" class="w-full" />
-            </UFormField>
 
-            <UFormField label="Last Name" name="last_name" required>
-              <UInput v-model="customer.last_name" placeholder="Enter last name" class="w-full" />
-            </UFormField>
+            <!-- Row: First Name + Last Name -->
+            <div class="flex flex-col md:flex-row gap-4">
+              <UFormField label="First Name" name="first_name" required class="w-full md:w-1/2">
+                <UInput v-model="customer.first_name" placeholder="Enter first name" class="w-full" />
+              </UFormField>
 
-            <UFormField label="Phone" name="phone" required>
-              <UInput v-model="customer.phone" placeholder="Enter phone number" class="w-full" />
-            </UFormField>
+              <UFormField label="Last Name" name="last_name" required class="w-full md:w-1/2">
+                <UInput v-model="customer.last_name" placeholder="Enter last name" class="w-full" />
+              </UFormField>
+            </div>
 
-            <UFormField label="Email" name="email" required>
-              <UInput v-model="customer.email" placeholder="Enter email" type="email" class="w-full" />
-            </UFormField>
+            <!-- Row: Phone + Email -->
+            <div class="flex flex-col md:flex-row gap-4">
+              <UFormField label="Phone" name="phone" required class="w-full md:w-1/2">
+                <UInput v-model="customer.phone" placeholder="Enter phone number" class="w-full" />
+              </UFormField>
 
+              <UFormField label="Email" name="email" required class="w-full md:w-1/2">
+                <UInput v-model="customer.email" placeholder="Enter email" type="email" class="w-full" />
+              </UFormField>
+            </div>
+
+            <!-- Row: Address -->
             <UFormField label="Address" name="address" required>
               <UTextarea v-model="customer.address" placeholder="Enter address" class="w-full" />
             </UFormField>
 
+            <!-- Button -->
             <div class="pt-4">
               <UButton type="submit" label="Save Changes" class="w-full justify-center" :loading="loading" />
             </div>
 
+            <!-- Error -->
             <div v-if="error" class="text-red-500 text-sm">{{ error }}</div>
+
           </UForm>
+
         </div>
       </UPageCard>
     </div>

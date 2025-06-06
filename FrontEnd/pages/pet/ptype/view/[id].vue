@@ -49,7 +49,7 @@ onMounted(async () => {
 <template>
   <div class="p-6 mx-auto" style="max-width: 750px;">
     <div class="space-y-6">
-      <h1 class="text-2xl font-semibold text-gray-900 mb-6">Pet Types</h1>
+      <h1 class="text-xl font-semibold text-gray-900 mb-5">View Pet Type</h1>
       <UBreadcrumb :items="items" />
 
       <UPageCard title="View Pet Type" description="Details about the selected pet type." spotlight

@@ -14,7 +14,6 @@ const globalFilter = ref('')
 const showDeleteModal = ref(false)
 const petToDelete = ref<Pet | null>(null)
 const toast = useToast()
-const table = useTemplateRef('table')
 
 type Pet = {
   pet_id: number
@@ -149,14 +148,14 @@ async function confirmDeletePet() {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">List of Pets</h1>
+  <div class="p-6 max-w-4xl mx-auto">
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Pets</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
       Error loading pets: {{ error }}
     </div>
 
-    <UCard v-if="filteredPets.length > 0">
+    <UCard>
       <template #header>
         <div class="flex justify-between items-center">
           <UInput v-model="globalFilter" placeholder="Search pets..." class="max-w-sm" />
@@ -179,9 +178,5 @@ async function confirmDeletePet() {
         </template>
       </UTable>
     </UCard>
-
-    <div v-else class="text-center text-gray-500 text-sm mt-10">
-      No pets found.
-    </div>
   </div>
 </template>

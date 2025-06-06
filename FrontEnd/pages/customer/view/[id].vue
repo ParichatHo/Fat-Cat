@@ -8,8 +8,8 @@ definePageMeta({
 })
 
 const items = ref<BreadcrumbItem[]>([
-    { label: 'Customer', icon: 'i-lucide-users', to: '/customer' },
-    { label: 'Customer View', icon: 'i-lucide-user', to: '' }
+    { label: 'Customers', icon: 'i-lucide-users', to: '/customer' },
+    { label: 'Customer Details', icon: 'i-lucide-user', to: '' }
 ])
 
 const customer = ref({
@@ -65,9 +65,9 @@ const fetchCustomerDetails = async () => {
 </script>
 
 <template>
-    <div class="min-h-[calc(100vh-64px)] flex justify-center px-4 pt-6">
-        <div class="w-full max-w-lg space-y-6">
-            <h1 class="text-lg font-semibold text-gray-900 mb-2">Customers List</h1>
+    <div class="p-6 mx-auto" style="max-width: 750px;">
+        <div class="space-y-6">
+            <h1 class="text-xl font-semibold text-gray-900 mb-5">Customer Details</h1>
             <UBreadcrumb :items="items" />
 
             <UPageCard title="Customer Details" description="View the details of the selected customer." spotlight
@@ -77,26 +77,34 @@ const fetchCustomerDetails = async () => {
                 <div v-if="error" class="text-red-500 text-sm">{{ error }}</div>
 
                 <UForm v-if="!loading && customer" :state="customer" class="space-y-4">
-                    <UFormField label="First Name" name="first_name">
-                        <UInput v-model="customer.first_name" readonly class="w-full" />
-                    </UFormField>
+                    <!-- Row: First Name + Last Name -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <UFormField label="First Name" name="first_name" class="w-full md:w-1/2">
+                            <UInput v-model="customer.first_name" readonly class="w-full" />
+                        </UFormField>
 
-                    <UFormField label="Last Name" name="last_name">
-                        <UInput v-model="customer.last_name" readonly class="w-full" />
-                    </UFormField>
+                        <UFormField label="Last Name" name="last_name" class="w-full md:w-1/2">
+                            <UInput v-model="customer.last_name" readonly class="w-full" />
+                        </UFormField>
+                    </div>
 
-                    <UFormField label="Phone" name="phone">
-                        <UInput v-model="customer.phone" readonly class="w-full" />
-                    </UFormField>
+                    <!-- Row: Phone + Email -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <UFormField label="Phone" name="phone" class="w-full md:w-1/2">
+                            <UInput v-model="customer.phone" readonly class="w-full" />
+                        </UFormField>
 
-                    <UFormField label="Email" name="email">
-                        <UInput v-model="customer.email" readonly class="w-full" />
-                    </UFormField>
+                        <UFormField label="Email" name="email" class="w-full md:w-1/2">
+                            <UInput v-model="customer.email" readonly class="w-full" />
+                        </UFormField>
+                    </div>
 
+                    <!-- Row: Address -->
                     <UFormField label="Address" name="address">
                         <UTextarea v-model="customer.address" readonly class="w-full" />
                     </UFormField>
                 </UForm>
+
             </UPageCard>
         </div>
     </div>

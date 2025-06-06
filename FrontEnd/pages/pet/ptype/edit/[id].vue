@@ -110,7 +110,7 @@ const validate = (state: any): FormError[] => {
 <template>
     <div class="p-6 mx-auto" style="max-width: 750px;">
         <div class="space-y-6">
-            <h1 class="text-2xl font-semibold text-gray-900 mb-6">Edit Pet Type</h1>
+            <h1 class="text-xl font-semibold text-gray-900 mb-5">Edit Pet Type</h1>
             <UBreadcrumb :items="items" />
 
             <UPageCard title="Edit Pet Type"
