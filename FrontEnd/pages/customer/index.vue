@@ -35,7 +35,14 @@ const showDeleteModal = ref(false)
 const ownerToDelete = ref<Owner | null>(null)
 
 const columns: TableColumn<Owner>[] = [
-  { accessorKey: 'owner_id', header: 'ID' },
+  {
+    accessorKey: 'owner_id',
+    header: 'ID',
+    cell: ({ row }) => {
+      const ownerId = row.original.owner_id
+      return `#${ownerId}`
+    }
+  },
   { accessorKey: 'first_name', header: 'First Name' },
   { accessorKey: 'last_name', header: 'Last Name' },
   { accessorKey: 'phone', header: 'Phone' },

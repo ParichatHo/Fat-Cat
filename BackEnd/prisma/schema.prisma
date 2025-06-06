@@ -37,7 +37,8 @@ model Pets {
   gender         String
   owner_id       Int
   type_id        Int
-  image_url      String?
+  image_url      String?            
+  weight         Float? 
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
   medicalRecords MedicalRecords[]

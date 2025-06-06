@@ -28,7 +28,10 @@ type Pet = {
     first_name: string
     last_name: string
   }
+  weight?: number
+  birth_date?: string
 }
+
 
 const { data: pets, error } = await useAsyncData<Pet[]>('pets', () =>
   $fetch('http://localhost:3001/pets', {
@@ -52,7 +55,14 @@ onMounted(() => {
 })
 
 const columns: TableColumn<Pet>[] = [
-  { accessorKey: 'pet_id', header: 'ID' },
+  {
+    accessorKey: 'pet_id',
+    header: 'ID',
+    cell: ({ row }) => {
+      const petId = row.original.pet_id
+      return `#${petId}`
+    }
+  },
   {
     accessorKey: 'pet_name',
     header: 'Name',
@@ -76,6 +86,58 @@ const columns: TableColumn<Pet>[] = [
   { accessorKey: 'breed_name', header: 'Breed' },
   { accessorKey: 'gender', header: 'Gender' },
   {
+    accessorKey: 'birthdate',
+    header: 'Birthdate',
+    cell: ({ row }) => {
+      const dateStr = row.original.birth_date
+      if (!dateStr) return '-'
+      const date = new Date(dateStr)
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      })
+    }
+  },
+  {
+    accessorKey: 'age',
+    header: 'Age',
+    cell: ({ row }) => {
+      const birthDateStr = row.original.birth_date
+      if (!birthDateStr) return '-'
+
+      const birth = new Date(birthDateStr)
+      const today = new Date()
+
+      // คำนวณความแตกต่างของเวลา
+      let years = today.getFullYear() - birth.getFullYear()
+      let months = today.getMonth() - birth.getMonth()
+      let days = today.getDate() - birth.getDate()
+
+      // ปรับค่าติดลบ
+      if (days < 0) {
+        months -= 1
+        // หาจำนวนวันในเดือนที่แล้ว
+        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+        days += lastMonth.getDate()
+      }
+
+      if (months < 0) {
+        years -= 1
+        months += 12
+      }
+
+      // สร้าง string ผลลัพธ์
+      let ageString = ''
+      if (years > 0) ageString += `${years} years`
+      if (months > 0) ageString += `${ageString ? ', ' : ''}${months} months`
+
+      return ageString || '0 days'
+    }
+  },
+  { accessorKey: 'weight', header: 'Weight (kg)', cell: ({ row }) => row.original.weight ?? '-' },
+
+  {
     accessorKey: 'owner',
     header: 'Owner',
     cell: ({ row }) =>
@@ -83,9 +145,9 @@ const columns: TableColumn<Pet>[] = [
   },
   {
     id: 'actions',
-    // header: 'Actions'
   }
 ]
+
 
 function getDropdownActions(pet: Pet): DropdownMenuItem[] {
   return [
@@ -148,7 +210,7 @@ async function confirmDeletePet() {
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
+  <div class="p-6 max-w-7xl mx-auto">
     <h1 class="text-2xl font-semibold text-gray-900 mb-6">Pets</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">

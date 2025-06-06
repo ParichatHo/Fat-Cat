@@ -30,7 +30,8 @@ const form = ref({
     gender: undefined as SelectOption<string> | undefined,
     owner_id: undefined as SelectOption<number> | undefined,
     type_id: undefined as SelectOption<number> | undefined,
-    image_url: ''
+    image_url: '',
+    weight: ''
 })
 
 const loading = ref(false)
@@ -70,7 +71,7 @@ onMounted(async () => {
 })
 
 async function uploadImage(file: File): Promise<string> {
-    const cloudinaryUrl = 'https://api.cloudinary.com/v1_1/<your-cloud-name>/image/upload'
+    const cloudinaryUrl = 'https://api.cloudinary.com/v1_1/dmkdkumyu/image/upload'
     const formData = new FormData()
     formData.append('file', file)
     formData.append('upload_preset', '<your-upload-preset>') // Example: my_unsigned_preset
@@ -100,6 +101,8 @@ function validate(): boolean {
     if (!form.value.owner_id?.value) errors.value.owner_id = 'Required'
     if (!form.value.type_id?.value) errors.value.type_id = 'Required'
     if (!selectedFile.value) errors.value.image_file = 'Required'
+    if (!form.value.weight) errors.value.weight = 'Required'
+    else if (isNaN(Number(form.value.weight)) || Number(form.value.weight) <= 0) errors.value.weight = 'Must be a positive number'
     return Object.keys(errors.value).length === 0
 }
 
@@ -151,7 +154,8 @@ async function submitForm() {
             gender: undefined,
             owner_id: undefined,
             type_id: undefined,
-            image_url: ''
+            image_url: '',
+            weight: ''
         }
         selectedFile.value = null
         errors.value = {}
@@ -200,14 +204,8 @@ function handleFileChange(event: Event) {
                     </div>
                     <div class="flex gap-4">
                         <UFormField label="Pet Type" required class="flex-1" :error="errors.type_id">
-                            <USelectMenu
-                                v-model="form.type_id"
-                                :items="petTypesExtra"
-                                option-attribute="label"
-                                by="value"
-                                placeholder="Select pet type"
-                                class="w-full"
-                            />
+                            <USelectMenu v-model="form.type_id" :items="petTypesExtra" option-attribute="label"
+                                by="value" placeholder="Select pet type" class="w-full" />
                         </UFormField>
                         <UFormField label="Breed" required class="flex-1" :error="errors.breed_name">
                             <UInput v-model="form.breed_name" placeholder="Breed" class="w-full" />
@@ -215,29 +213,24 @@ function handleFileChange(event: Event) {
                     </div>
                     <div class="flex gap-4">
                         <UFormField label="Gender" required class="flex-1" :error="errors.gender">
-                            <USelectMenu
-                                v-model="form.gender"
-                                :items="genderOptions"
-                                option-attribute="label"
-                                by="value"
-                                placeholder="Select gender"
-                                class="w-full"
-                            />
+                            <USelectMenu v-model="form.gender" :items="genderOptions" option-attribute="label"
+                                by="value" placeholder="Select gender" class="w-full" />
+                        </UFormField>
+                        <UFormField label="Weight (kg)" required class="flex-1" :error="errors.weight">
+                            <UInput v-model="form.weight" type="number" min="0" step="0.1" placeholder="Weight in kg"
+                                class="w-full" />
                         </UFormField>
                         <UFormField label="Owner" required class="flex-1" :error="errors.owner_id">
-                            <USelectMenu
-                                v-model="form.owner_id"
-                                :items="ownersExtra"
-                                option-attribute="label"
-                                by="value"
-                                placeholder="Select owner"
-                                class="w-full"
-                            />
+                            <USelectMenu v-model="form.owner_id" :items="ownersExtra" option-attribute="label"
+                                by="value" placeholder="Select owner" class="w-full" />
                         </UFormField>
                     </div>
-                    <UFormField label="Image File" required :error="errors.image_file">
-                        <UInput type="file" accept="image/*" @change="handleFileChange" class="w-full" />
-                    </UFormField>
+                    <div class="flex gap-4">
+                        <UFormField label="Image File" required :error="errors.image_file" class="flex-1">
+                            <UInput type="file" accept="image/*" @change="handleFileChange" class="w-full" />
+                        </UFormField>
+                    </div>
+
                     <div class="pt-4">
                         <UButton type="submit" label="Add Pet" class="w-full justify-center" :loading="loading" />
                     </div>
