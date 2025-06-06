@@ -2,11 +2,14 @@
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem } from '@nuxt/ui'
-import { navigateTo } from '#app'
+import { navigateTo, useRoute } from '#app'
+
+const route = useRoute()
+const petId = route.params.id
 
 const items = ref<BreadcrumbItem[]>([
     { label: 'Pets', icon: 'i-lucide-paw-print', to: '/pet' },
-    { label: 'Add New Pet', icon: 'i-lucide-dog', to: '/pet/create' }
+    { label: 'Edit Pet', icon: 'i-lucide-dog', to: `/pet/edit/${petId}` }
 ])
 
 definePageMeta({
@@ -39,7 +42,7 @@ const error = ref<string | null>(null)
 const success = ref(false)
 const token = ref<string | null>(null)
 const selectedFile = ref<File | null>(null)
-const imagePreview = ref<string | null>(null) // เพิ่มตัวแปรสำหรับเก็บ URL ของ image preview
+const imagePreview = ref<string | null>(null)
 const errors = ref<Record<string, string>>({})
 
 onMounted(async () => {
@@ -50,6 +53,7 @@ onMounted(async () => {
     }
 
     try {
+        // Fetch pet types
         const typesData = await $fetch<{ type_id: number; type_name: string }[]>('http://localhost:3001/ptypes', {
             headers: { Authorization: `Bearer ${token.value}` }
         })
@@ -58,6 +62,7 @@ onMounted(async () => {
             value: type.type_id
         }))
 
+        // Fetch owners
         const ownersData = await $fetch<{ owner_id: number; first_name: string; last_name: string }[]>('http://localhost:3001/owners', {
             headers: { Authorization: `Bearer ${token.value}` }
         })
@@ -65,8 +70,25 @@ onMounted(async () => {
             label: `${owner.first_name} ${owner.last_name}`,
             value: owner.owner_id
         }))
+
+        // Fetch pet data
+        const petData = await $fetch<{ pet_name: string; birth_date: string; breed_name: string; gender: string; owner_id: number; type_id: number; image_url: string; weight: string }>(`http://localhost:3001/pets/${petId}`, {
+            headers: { Authorization: `Bearer ${token.value}` }
+        })
+
+        form.value = {
+            pet_name: petData.pet_name,
+            birth_date: formatDate(petData.birth_date),
+            breed_name: petData.breed_name,
+            gender: genderOptions.find(opt => opt.value === petData.gender),
+            owner_id: ownersExtra.value.find(opt => opt.value === petData.owner_id),
+            type_id: petTypesExtra.value.find(opt => opt.value === petData.type_id),
+            image_url: petData.image_url,
+            weight: petData.weight
+        }
+        imagePreview.value = petData.image_url
     } catch (err) {
-        error.value = 'Failed to load pet types or owners. Please try again.'
+        error.value = 'Failed to load pet data, types, or owners. Please try again.'
         console.error('Failed to load data', err)
     }
 })
@@ -79,7 +101,6 @@ function validate(): boolean {
     if (!form.value.gender?.value) errors.value.gender = 'Required'
     if (!form.value.owner_id?.value) errors.value.owner_id = 'Required'
     if (!form.value.type_id?.value) errors.value.type_id = 'Required'
-    if (!selectedFile.value) errors.value.image_file = 'Required'
     if (!form.value.weight) errors.value.weight = 'Required'
     else if (isNaN(Number(form.value.weight)) || Number(form.value.weight) <= 0) errors.value.weight = 'Must be a positive number'
     return Object.keys(errors.value).length === 0
@@ -94,7 +115,7 @@ function handleFileChange(event: Event) {
         if (!validTypes.includes(file.type)) {
             error.value = 'Please select a valid image file (JPEG, JPG, PNG, WebP)'
             selectedFile.value = null
-            imagePreview.value = null
+            imagePreview.value = form.value.image_url
             target.value = ''
             return
         }
@@ -102,7 +123,7 @@ function handleFileChange(event: Event) {
         if (file.size > 5 * 1024 * 1024) {
             error.value = 'Image file size must be less than 5MB'
             selectedFile.value = null
-            imagePreview.value = null
+            imagePreview.value = form.value.image_url
             target.value = ''
             return
         }
@@ -110,7 +131,6 @@ function handleFileChange(event: Event) {
         error.value = null
         selectedFile.value = file
 
-        // สร้าง image preview
         const reader = new FileReader()
         reader.onload = (e) => {
             imagePreview.value = e.target?.result as string
@@ -118,13 +138,14 @@ function handleFileChange(event: Event) {
         reader.readAsDataURL(file)
     } else {
         selectedFile.value = null
-        imagePreview.value = null
+        imagePreview.value = form.value.image_url
     }
 }
 
 function removeImage() {
     selectedFile.value = null
     imagePreview.value = null
+    form.value.image_url = ''
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     if (fileInput) {
         fileInput.value = ''
@@ -152,53 +173,44 @@ async function submitForm() {
             formData.append('image_file', selectedFile.value)
         }
 
-        await $fetch('http://localhost:3001/pets', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token.value}`,
-            },
+        await fetch(`http://localhost:3001/pets/${petId}`, {
+            method: 'PUT',
             body: formData,
+            headers: {
+                Authorization: `Bearer ${token.value}`
+            }
         })
 
         success.value = true
         await Swal.fire({
             title: 'Success!',
-            text: 'Pet has been added successfully.',
+            text: 'Pet has been updated successfully.',
             icon: 'success',
             confirmButtonText: 'OK',
             confirmButtonColor: '#00C16A',
         })
 
-        // รีเซ็ตฟอร์ม
-        form.value = {
-            pet_name: '',
-            birth_date: '',
-            breed_name: '',
-            gender: undefined,
-            owner_id: undefined,
-            type_id: undefined,
-            image_url: '',
-            weight: '',
-        }
-        selectedFile.value = null
-        imagePreview.value = null
-        errors.value = {}
         navigateTo('/pet')
     } catch (err: any) {
-        error.value = err?.data?.message || err.message || 'Failed to add pet'
+        error.value = err?.data?.message || err.message || 'Failed to update pet'
         console.error('Submit error:', err)
     } finally {
         loading.value = false
     }
 }
+
+function formatDate(dateString: string) {
+    return new Date(dateString).toISOString().split('T')[0]
+}
+
 </script>
 
 <template>
     <div class="p-6 mx-auto" style="max-width: 750px;">
         <div class="space-y-6">
-            <h1 class="text-xl font-semibold text-gray-900 mb-5">Add New Pet</h1>
+            <h1 class="text-xl font-semibold text-gray-900 mb-5">Edit Pet</h1>
             <UBreadcrumb :items="items" />
-            <UPageCard title="Add New Pet" description="Fill in the form to add a new pet">
+            <UPageCard title="Edit Pet" description="Update the pet's information">
                 <form @submit.prevent="submitForm" class="space-y-4">
                     <div class="flex gap-4">
                         <UFormField label="Pet Name" required class="flex-1" :error="errors.pet_name">
@@ -232,7 +244,7 @@ async function submitForm() {
                         </UFormField>
                     </div>
                     <div class="space-y-4">
-                        <UFormField label="Pet Image" required :error="errors.image_file">
+                        <UFormField label="Pet Image" :error="errors.image_file">
                             <UInput type="file" name="image_file" accept="image/jpeg,image/jpg,image/png,image/webp"
                                 @change="handleFileChange" class="w-full" />
                             <div class="text-sm text-gray-500 mt-1">
@@ -252,11 +264,11 @@ async function submitForm() {
                         </div>
                     </div>
                     <div class="pt-4">
-                        <UButton type="submit" label="Add Pet" class="w-full justify-center" :loading="loading"
+                        <UButton type="submit" label="Update Pet" class="w-full justify-center" :loading="loading"
                             :disabled="loading" />
                     </div>
                     <div v-if="error" class="text-red-500 text-sm mt-2">{{ error }}</div>
-                    <div v-if="success" class="text-green-600 text-sm font-medium mt-2">Pet added successfully!</div>
+                    <div v-if="success" class="text-green-600 text-sm font-medium mt-2">Pet updated successfully!</div>
                 </form>
             </UPageCard>
         </div>

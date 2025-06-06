@@ -11,16 +11,19 @@ const init = async () => {
     host: 'localhost',
     routes: {
       cors: {
-        origin: ['http://localhost:3000'], // อนุญาตเฉพาะเว็บนี้
+        origin: ['http://localhost:3000'],
         additionalHeaders: ['cache-control', 'x-requested-with'],
-        credentials: true  // เพิ่มบรรทัดนี้เพื่ออนุญาตส่ง cookie และ credentials
+        credentials: true,
+      },
+      payload: {
+        maxBytes: 10 * 1024 * 1024, // จำกัดขนาด payload 10MB
       },
       validate: {
         failAction: async (request, h, err) => {
-          throw err; // Show detailed validation errors during development
-        }
-      }
-    }
+          throw err;
+        },
+      },
+    },
   });
 
 
