@@ -178,10 +178,15 @@ function getDropdownActions(pet: Pet): DropdownMenuItem[] {
           cancelButtonText: 'Cancel'
         }).then(async (result) => {
           if (result.isConfirmed) {
-            confirmDeletePet()
-            Swal.fire('Deleted', `<strong>${pet.pet_name}</strong> has been deleted.`, 'success')
+            await confirmDeletePet()
+            Swal.fire({
+              title: "Deleted",
+              html: `<strong>${pet.pet_name}</strong> has been deleted.`,
+              icon: "success",
+              confirmButtonColor: "#00C16A"
+            });
           }
-        })
+        });
       }
     }
   ]
