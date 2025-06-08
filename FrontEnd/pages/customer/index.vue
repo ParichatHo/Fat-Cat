@@ -3,9 +3,10 @@ import { ref, onMounted, h } from 'vue'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2';
-
+import { getPaginationRowModel } from '@tanstack/vue-table'
 
 const router = useRouter()
+const globalFilter = ref('')
 
 definePageMeta({
   layout: 'navbar',
@@ -20,6 +21,31 @@ type Owner = {
   email: string
   address: string
 }
+
+const filteredOwners = computed(() => {
+  if (!owners.value) return []
+  const keyword = globalFilter.value.toLowerCase()
+  return owners.value.filter((owner) =>
+    [owner.first_name, owner.last_name, owner.phone, owner.email, owner.address]
+      .filter(Boolean)
+      .some((field) => field!.toLowerCase().includes(keyword))
+  )
+})
+
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 5 // Adjust pageSize as needed
+})
+
+// Compute the "Showing X to Y of Z" text
+const showingText = computed(() => {
+  const total = filteredOwners.value.length
+  const pageSize = pagination.value.pageSize
+  const pageIndex = pagination.value.pageIndex
+  const start = pageIndex * pageSize + 1
+  const end = Math.min((pageIndex + 1) * pageSize, total)
+  return total > 0 ? `Showing ${start} to ${end} of ${total} entries` : 'No entries to show'
+})
 
 const token = ref<string | null>(null)
 const owners = ref<Owner[]>([])
@@ -60,7 +86,6 @@ const columns: TableColumn<Owner>[] = [
   },
   {
     id: 'actions',
-    // header: 'Actions'
   }
 ]
 
@@ -152,19 +177,18 @@ function getDropdownActions(user: Owner): DropdownMenuItem[] {
           }
         });
       }
-
     }
   ]
 }
 
 function onDropdownSelect(item: DropdownMenuItem) {
-  // ตัวอย่างถ้าต้องการจัดการ select จาก dropdown
+  // Handle dropdown select if needed
 }
 </script>
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Customers</h1>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-3">Customers</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
       Failed to load customers data: {{ error }}
@@ -190,8 +214,17 @@ function onDropdownSelect(item: DropdownMenuItem) {
         </template>
 
         <!-- Content -->
-        <UTable ref="table" v-model:column-filters="columnFilters" :data="owners" :columns="columns"
-          class="border border-gray-300 dark:border-gray-600 rounded-md mt-4">
+        <UTable
+          ref="table"
+          v-model:column-filters="columnFilters"
+          :data="filteredOwners"
+          :columns="columns"
+          v-model:pagination="pagination"
+          :pagination-options="{
+            getPaginationRowModel: getPaginationRowModel()
+          }"
+          class="border border-gray-300 dark:border-gray-600 rounded-md"
+        >
           <template #actions-cell="{ row }">
             <UDropdownMenu :items="getDropdownActions(row.original)" @select="onDropdownSelect">
               <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" aria-label="Actions" />
@@ -199,12 +232,17 @@ function onDropdownSelect(item: DropdownMenuItem) {
           </template>
         </UTable>
 
-        <!-- Footer (ถ้าต้องการใส่ footer) -->
-        <!--
-          <template #footer>
-            <div class="text-sm text-gray-500 text-center py-3">Footer content here</div>
-          </template>
-          -->
+        <!-- Footer with pagination and showing text -->
+        <div class="flex items-center justify-between pt-4 w-full px-0">
+          <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
+          <UPagination
+            :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
+            :total="filteredOwners.length"
+            @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+            class="pr-0"
+          />
+        </div>
       </UCard>
     </div>
 

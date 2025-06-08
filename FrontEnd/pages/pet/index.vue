@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
+import { getPaginationRowModel } from '@tanstack/vue-table'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import Swal from 'sweetalert2'
 
@@ -14,6 +15,7 @@ const globalFilter = ref('')
 const showDeleteModal = ref(false)
 const petToDelete = ref<Pet | null>(null)
 const toast = useToast()
+const table = useTemplateRef('table')
 
 type Pet = {
   pet_id: number
@@ -32,7 +34,6 @@ type Pet = {
   birth_date?: string
 }
 
-
 const { data: pets, error } = await useAsyncData<Pet[]>('pets', () =>
   $fetch('http://localhost:3001/pets', {
     credentials: 'include',
@@ -47,6 +48,21 @@ const filteredPets = computed(() => {
       .filter(Boolean)
       .some((field) => field!.toLowerCase().includes(keyword))
   )
+})
+
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 5 // Adjust pageSize as needed
+})
+
+// Compute the "Showing X to Y of Z" text
+const showingText = computed(() => {
+  const total = filteredPets.value.length
+  const pageSize = pagination.value.pageSize
+  const pageIndex = pagination.value.pageIndex
+  const start = pageIndex * pageSize + 1
+  const end = Math.min((pageIndex + 1) * pageSize, total)
+  return total > 0 ? `Showing ${start} to ${end} of ${total} entries` : 'No entries to show'
 })
 
 onMounted(() => {
@@ -64,18 +80,24 @@ const columns: TableColumn<Pet>[] = [
     }
   },
   {
+    id: 'img',
+    // header: 'Image',
+    cell: ({ row }) => {
+      const pet = row.original
+      return h('img', {
+        src: pet.image_url || '/default-pet.png', // ใช้ URL ของรูปภาพ หรือรูปที่มีค่า default
+        alt: pet.pet_name,
+        class: 'w-10 h-10 rounded-full object-cover'
+      })
+    }
+  },
+
+  {
     accessorKey: 'pet_name',
     header: 'Name',
     cell: ({ row }) => {
       const pet = row.original
-      return h('div', { class: 'flex items-center space-x-3' }, [
-        h('img', {
-          src: pet.image_url || '/default-pet.png',
-          alt: pet.pet_name,
-          class: 'w-10 h-10 rounded-full object-cover'
-        }),
-        h('span', {}, pet.pet_name)
-      ])
+      return h('span', {}, pet.pet_name) 
     }
   },
   {
@@ -109,15 +131,12 @@ const columns: TableColumn<Pet>[] = [
       const birth = new Date(birthDateStr)
       const today = new Date()
 
-      // คำนวณความแตกต่างของเวลา
       let years = today.getFullYear() - birth.getFullYear()
       let months = today.getMonth() - birth.getMonth()
       let days = today.getDate() - birth.getDate()
 
-      // ปรับค่าติดลบ
       if (days < 0) {
         months -= 1
-        // หาจำนวนวันในเดือนที่แล้ว
         const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
         days += lastMonth.getDate()
       }
@@ -127,16 +146,19 @@ const columns: TableColumn<Pet>[] = [
         months += 12
       }
 
-      // สร้าง string ผลลัพธ์
       let ageString = ''
       if (years > 0) ageString += `${years} years`
       if (months > 0) ageString += `${ageString ? ', ' : ''}${months} months`
+      if (years === 0 && months === 0) ageString = `${days} days`
 
-      return ageString || '0 days'
+      return ageString
     }
   },
-  { accessorKey: 'weight', header: 'Weight (kg)', cell: ({ row }) => row.original.weight ?? '-' },
-
+  {
+    accessorKey: 'weight',
+    header: 'Weight (kg)',
+    cell: ({ row }) => row.original.weight !== undefined ? row.original.weight.toFixed(1) : '-'
+  },
   {
     accessorKey: 'owner',
     header: 'Owner',
@@ -147,7 +169,6 @@ const columns: TableColumn<Pet>[] = [
     id: 'actions',
   }
 ]
-
 
 function getDropdownActions(pet: Pet): DropdownMenuItem[] {
   return [
@@ -216,7 +237,7 @@ async function confirmDeletePet() {
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Pets</h1>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-3">Pets</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
       Error loading pets: {{ error }}
@@ -237,13 +258,22 @@ async function confirmDeletePet() {
         </div>
       </template>
 
-      <UTable ref="table" :columns="columns" :data="filteredPets" class="border border-gray-300 mt-4 rounded-md">
+      <UTable ref="table" :columns="columns" :data="filteredPets" v-model:pagination="pagination" :pagination-options="{
+        getPaginationRowModel: getPaginationRowModel()
+      }" class="border border-gray-300 rounded-md">
         <template #actions-cell="{ row }">
           <UDropdownMenu :items="getDropdownActions(row.original)">
             <UButton icon="i-lucide-ellipsis-vertical" variant="ghost" color="neutral" />
           </UDropdownMenu>
         </template>
       </UTable>
+
+      <div class="flex items-center justify-between pt-4 w-full px-0">
+        <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
+        <UPagination :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+          :items-per-page="table?.tableApi?.getState().pagination.pageSize" :total="filteredPets.length"
+          @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)" class="pr-0" />
+      </div>
     </UCard>
   </div>
 </template>

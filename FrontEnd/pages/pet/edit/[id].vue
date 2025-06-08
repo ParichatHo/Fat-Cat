@@ -115,7 +115,7 @@ function handleFileChange(event: Event) {
         if (!validTypes.includes(file.type)) {
             error.value = 'Please select a valid image file (JPEG, JPG, PNG, WebP)'
             selectedFile.value = null
-            imagePreview.value = form.value.image_url
+            imagePreview.value = form.value.image_url || null
             target.value = ''
             return
         }
@@ -123,13 +123,14 @@ function handleFileChange(event: Event) {
         if (file.size > 5 * 1024 * 1024) {
             error.value = 'Image file size must be less than 5MB'
             selectedFile.value = null
-            imagePreview.value = form.value.image_url
+            imagePreview.value = form.value.image_url || null
             target.value = ''
             return
         }
 
         error.value = null
         selectedFile.value = file
+        console.log('Selected file:', file.name, file.type, file.size)
 
         const reader = new FileReader()
         reader.onload = (e) => {
@@ -138,7 +139,7 @@ function handleFileChange(event: Event) {
         reader.readAsDataURL(file)
     } else {
         selectedFile.value = null
-        imagePreview.value = form.value.image_url
+        imagePreview.value = form.value.image_url || null
     }
 }
 
@@ -146,11 +147,15 @@ function removeImage() {
     selectedFile.value = null
     imagePreview.value = null
     form.value.image_url = ''
+
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     if (fileInput) {
         fileInput.value = ''
     }
+
+    console.log('Image removed')
 }
+
 
 async function submitForm() {
     if (!validate()) {
@@ -169,19 +174,42 @@ async function submitForm() {
         formData.append('owner_id', form.value.owner_id?.value?.toString() || '')
         formData.append('type_id', form.value.type_id?.value?.toString() || '')
         formData.append('weight', form.value.weight)
+
+        // Handle image file
         if (selectedFile.value) {
             formData.append('image_file', selectedFile.value)
+            console.log('Uploading new image:', selectedFile.value.name)
         }
 
-        await fetch(`http://localhost:3001/pets/${petId}`, {
+        // Handle image removal
+        if (!imagePreview.value && !selectedFile.value) {
+            formData.append('remove_image', 'true')
+            console.log('Removing image')
+        }
+
+        // Debug FormData contents
+        console.log('FormData contents:')
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value)
+        }
+
+        const response = await fetch(`http://localhost:3001/pets/${petId}`, {
             method: 'PUT',
             body: formData,
             headers: {
-                Authorization: `Bearer ${token.value}`
+                'Authorization': `Bearer ${token.value}`
             }
         })
 
+        const responseData = await response.json()
+        console.log('Response:', responseData)
+
+        if (!response.ok) {
+            throw new Error(responseData.message || 'Failed to update pet')
+        }
+
         success.value = true
+
         await Swal.fire({
             title: 'Success!',
             text: 'Pet has been updated successfully.',
@@ -192,8 +220,8 @@ async function submitForm() {
 
         navigateTo('/pet')
     } catch (err: any) {
-        error.value = err?.data?.message || err.message || 'Failed to update pet'
         console.error('Submit error:', err)
+        error.value = err?.message || 'Failed to update pet'
     } finally {
         loading.value = false
     }
@@ -202,6 +230,8 @@ async function submitForm() {
 function formatDate(dateString: string) {
     return new Date(dateString).toISOString().split('T')[0]
 }
+
+const today = new Date().toISOString().split('T')[0] // รูปแบบเป็น 'YYYY-MM-DD'
 
 </script>
 
@@ -217,8 +247,9 @@ function formatDate(dateString: string) {
                             <UInput v-model="form.pet_name" placeholder="Pet name" class="w-full" />
                         </UFormField>
                         <UFormField label="Birth Date" required class="flex-1" :error="errors.birth_date">
-                            <UInput v-model="form.birth_date" type="date" class="w-full" />
+                            <UInput v-model="form.birth_date" type="date" :max="today" class="w-full" />
                         </UFormField>
+
                     </div>
                     <div class="flex gap-4">
                         <UFormField label="Pet Type" required class="flex-1" :error="errors.type_id">

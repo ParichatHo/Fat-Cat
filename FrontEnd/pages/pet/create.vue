@@ -191,6 +191,9 @@ async function submitForm() {
         loading.value = false
     }
 }
+
+const today = new Date().toISOString().split('T')[0] // yyyy-mm-dd
+
 </script>
 
 <template>
@@ -205,8 +208,9 @@ async function submitForm() {
                             <UInput v-model="form.pet_name" placeholder="Pet name" class="w-full" />
                         </UFormField>
                         <UFormField label="Birth Date" required class="flex-1" :error="errors.birth_date">
-                            <UInput v-model="form.birth_date" type="date" class="w-full" />
+                            <UInput v-model="form.birth_date" type="date" :max="today" class="w-full" />
                         </UFormField>
+
                     </div>
                     <div class="flex gap-4">
                         <UFormField label="Pet Type" required class="flex-1" :error="errors.type_id">

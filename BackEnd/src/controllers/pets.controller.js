@@ -87,28 +87,47 @@ const updatePet = {
         const { pet_id } = request.params;
         try {
             const { payload } = request;
+            console.log('Payload received:', payload); // Debug log
+            
             const file = payload.image_file;
             const removeImage = payload.remove_image === 'true';
 
-            if (file) {
-                const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-                if (!validTypes.includes(file.mimetype)) {
-                    return h.response({ message: 'Invalid file type. Only JPEG, JPG, PNG, WebP are allowed' }).code(400);
+            // Validate file if provided
+            if (file && file.path) {
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+                if (!validTypes.includes(file.headers['content-type'])) {
+                    return h.response({ 
+                        message: 'Invalid file type. Only JPEG, JPG, PNG, WebP are allowed' 
+                    }).code(400);
                 }
-                if (file.size > 5 * 1024 * 1024) {
-                    return h.response({ message: 'File size exceeds 5MB limit' }).code(400);
+                if (file._data && file._data.length > 5 * 1024 * 1024) {
+                    return h.response({ 
+                        message: 'File size exceeds 5MB limit' 
+                    }).code(400);
                 }
             }
 
+            console.log('File info:', file ? { 
+                filename: file.filename, 
+                contentType: file.headers['content-type'],
+                path: file.path 
+            } : 'No file');
+
             const updatedPet = await petService.updatePet(Number(pet_id), payload, file, removeImage);
-            return h.response(updatedPet).code(200);
+            
+            return h.response({
+                message: 'Pet updated successfully',
+                data: updatedPet
+            }).code(200);
         } catch (error) {
             console.error("Error updating pet:", error);
-            return h.response({ message: error.message || "Failed to update pet" }).code(500);
+            return h.response({
+                message: error.message || "Failed to update pet",
+                error: error.stack // เพิ่ม stack trace สำหรับ debug
+            }).code(500);
         }
     },
 };
-
 
 //   Delete pets
 const deletePet = {

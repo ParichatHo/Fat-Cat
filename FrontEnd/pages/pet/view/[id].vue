@@ -39,17 +39,6 @@ const pet = ref<Pet | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const calculateAge = (birthDate: string) => {
-  const today = new Date()
-  const birthDateObj = new Date(birthDate)
-  const age = today.getFullYear() - birthDateObj.getFullYear()
-  const m = today.getMonth() - birthDateObj.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birthDateObj.getDate())) {
-    return age - 1
-  }
-  return age
-}
-
 onMounted(async () => {
   const token = localStorage.getItem('authToken')
   if (!token) {
@@ -112,8 +101,14 @@ const formatAge = (birthDateStr?: string) => {
   if (years > 0) ageString += `${years} years`
   if (months > 0) ageString += `${ageString ? ', ' : ''}${months} months`
 
+  // กรณียังไม่ถึงเดือนหรือปีเลย ให้แสดงเป็นจำนวนวัน
+  if (years === 0 && months === 0 && days > 0) {
+    ageString = `${days} days`
+  }
+
   return ageString || '0 days'
 }
+
 </script>
 
 <template>
@@ -159,7 +154,7 @@ const formatAge = (birthDateStr?: string) => {
                 <div>
                   <h3 class="font-semibold mb-1">Owner</h3>
                   <p class="text-sm text-gray-600">{{ pet.owner ? `${pet.owner.first_name} ${pet.owner.last_name}` : '-'
-                    }}</p>
+                  }}</p>
                 </div>
                 <div>
                   <h3 class="font-semibold mb-1">Birthdate</h3>
@@ -171,7 +166,8 @@ const formatAge = (birthDateStr?: string) => {
                 </div>
                 <div>
                   <h3 class="font-semibold mb-1">Weight (kg)</h3>
-                  <p class="text-sm text-gray-600">{{ pet.weight !== undefined ? `${pet.weight} kg` : '-' }}</p>
+                  <p class="text-sm text-gray-600">{{ pet.weight !== undefined ? `${pet.weight.toFixed(1)} kg` : '-' }}
+                  </p>
                 </div>
               </div>
 

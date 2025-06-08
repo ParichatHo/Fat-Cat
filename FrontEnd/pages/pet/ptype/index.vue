@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import type { TableColumn, DropdownMenuItem, BreadcrumbItem } from '@nuxt/ui'
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2'
+import { getPaginationRowModel } from '@tanstack/vue-table'
 
 definePageMeta({
     layout: 'navbar',
@@ -21,17 +22,30 @@ const items = ref<BreadcrumbItem[]>([
 ])
 
 const router = useRouter()
+const route = useRoute()
 const token = ref<string | null>(null)
 const petTypes = ref<PetType[]>([])
 const error = ref<string | null>(null)
 const loading = ref<boolean>(false)
 const toast = useToast()
-
 const showDeleteModal = ref(false)
 const petTypeToDelete = ref<PetType | null>(null)
-
 const table = useTemplateRef('table')
 const columnFilters = ref([{ id: 'type_name', value: '' }])
+
+const pagination = ref({
+    pageIndex: 0,
+    pageSize: 5
+})
+
+const showingText = computed(() => {
+    const total = petTypes.value.length
+    const pageSize = pagination.value.pageSize
+    const pageIndex = pagination.value.pageIndex
+    const start = pageIndex * pageSize + 1
+    const end = Math.min((pageIndex + 1) * pageSize, total)
+    return total > 0 ? `Showing ${start} to ${end} of ${total} entries` : 'No entries to show'
+})
 
 const columns: TableColumn<PetType>[] = [
     {
@@ -112,6 +126,10 @@ async function confirmDeletePetType() {
             headers: { Authorization: `Bearer ${token.value}` }
         })
         petTypes.value = petTypes.value.filter(p => p.type_id !== petTypeToDelete.value?.type_id)
+        const totalPages = Math.ceil(petTypes.value.length / pagination.value.pageSize)
+        if (pagination.value.pageIndex >= totalPages && totalPages > 0) {
+            pagination.value.pageIndex = totalPages - 1
+        }
         toast.add({ title: 'Pet type deleted successfully', color: 'success' })
     } catch (err: any) {
         toast.add({
@@ -134,6 +152,13 @@ onMounted(async () => {
             headers: { Authorization: `Bearer ${token.value}` }
         })
         petTypes.value = data
+
+        // Set pageIndex from query parameter
+        const page = Number(route.query.page)
+        if (!isNaN(page) && page > 0) {
+            const totalPages = Math.ceil(petTypes.value.length / pagination.value.pageSize)
+            pagination.value.pageIndex = Math.min(page - 1, totalPages - 1)
+        }
     } catch (err: any) {
         error.value = err?.data?.message || err.message || 'Unknown error'
     } finally {
@@ -144,9 +169,7 @@ onMounted(async () => {
 
 <template>
     <div class="p-6 mx-auto" style="max-width: 750px;">
-
         <h1 class="text-xl font-semibold text-gray-900 mb-5">Pet Types</h1>
-        <!-- Breadcrumb -->
         <UBreadcrumb :items="items" class="mb-6" />
         <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
             Failed to load pet types: {{ error }}
@@ -161,7 +184,6 @@ onMounted(async () => {
 
         <div v-else>
             <UCard>
-                <!-- Header -->
                 <template #header>
                     <div class="flex justify-between items-center">
                         <UInput :model-value="table?.tableApi?.getColumn('type_name')?.getFilterValue() as string"
@@ -171,20 +193,39 @@ onMounted(async () => {
                     </div>
                 </template>
 
-                <!-- Content -->
-                <UTable ref="table" v-model:column-filters="columnFilters" :data="petTypes" :columns="columns"
-                    class="border border-gray-300 dark:border-gray-600 rounded-md mt-4">
+                <UTable
+                    ref="table"
+                    v-model:column-filters="columnFilters"
+                    :data="petTypes"
+                    :columns="columns"
+                    v-model:pagination="pagination"
+                    :pagination-options="{
+                        getPaginationRowModel: getPaginationRowModel()
+                    }"
+                    class="border border-gray-300 dark:border-gray-600 rounded-md"
+                    :class="['[&>div>table>tbody>tr>td]:py-1', '[&>div>table>thead>tr>th]:py-1']"
+                >
                     <template #actions-cell="{ row }">
                         <UDropdownMenu :items="getDropdownActions(row.original)">
                             <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost"
-                                aria-label="Actions" />
+                                aria-label="Actions" size="xs" />
                         </UDropdownMenu>
                     </template>
                 </UTable>
+
+                <div class="flex items-center justify-between border-t border-default pt-4 w-full px-0">
+                    <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
+                    <UPagination
+                        :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+                        :items-per-page="table?.tableApi?.getState().pagination.pageSize"
+                        :total="petTypes.length"
+                        @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+                        class="pr-0"
+                    />
+                </div>
             </UCard>
         </div>
 
-        <!-- Delete Confirmation Modal -->
         <div v-if="showDeleteModal" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
             <div
                 class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-lg shadow-lg ring ring-gray-200 dark:ring-gray-700 p-6 animate-scale-in">
@@ -214,3 +255,12 @@ onMounted(async () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+:deep(.table > tbody > tr > td),
+:deep(.table > thead > tr > th) {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    line-height: 1.25rem;
+}
+</style>
