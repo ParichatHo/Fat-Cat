@@ -55,9 +55,9 @@ const items = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-home',
   },
   {
-    label: 'MedicalRecord',
+    label: 'Medical Record',
     to: '/medicalRecord',
-    icon: 'i-lucide-calendar-clock',
+    icon: 'i-lucide-file-text',
   },
 ])
 

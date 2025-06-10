@@ -75,6 +75,7 @@ const userInfo = {
         full_name: `${userRecord.first_name} ${userRecord.last_name}`,
         role: `${userRecord.role}`,
         image_url: `${userRecord.image_url}`,
+        
         // เพิ่มข้อมูลอื่น ๆ ถ้าต้องการ
       }).code(200);
 

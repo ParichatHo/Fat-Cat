@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import type { Table } from '@tanstack/vue-table'
+const UBadge = resolveComponent('UBadge')
 
 const table = ref<Table<MedicalRecord> | null>(null)
 const router = useRouter()
@@ -25,6 +26,8 @@ type MedicalRecord = {
   treatment: string
   medication: string
   notes: string
+  status: string // เพิ่ม status field
+  appointment_date: string // เพิ่ม appointment field
   createdAt: string
   updatedAt: string | null
   pet?: {
@@ -61,7 +64,9 @@ const filteredRecords = computed(() => {
       record.diagnosis || '',
       record.treatment || '',
       record.medication || '',
-      record.notes || ''
+      record.notes || '',
+      record.status || '', // เพิ่ม status ในการค้นหา
+      record.appointment_date || '' // เพิ่ม appointment ในการค้นหา
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(keyword))
@@ -125,7 +130,7 @@ onMounted(async () => {
     console.error('API Error:', err)
     toast.add({
       title: 'Failed to load records',
-      description: error.value || 'Unknown error', // Changed from ?? to || to ensure string
+      description: error.value || 'Unknown error',
       color: 'error'
     })
   } finally {
@@ -151,7 +156,7 @@ async function confirmDeleteRecord() {
     error.value = err?.data?.message || err.message || 'Unknown error'
     toast.add({
       title: 'Failed to delete record',
-      description: error.value || 'Unknown error', // Changed from ?? to || to ensure string
+      description: error.value || 'Unknown error',
       color: 'error'
     })
   } finally {
@@ -226,7 +231,54 @@ const columns: TableColumn<MedicalRecord>[] = [
   {
     accessorKey: 'visit_date',
     header: 'Visit Date',
-    cell: ({ row }) => new Date(row.getValue('visit_date')).toLocaleDateString()
+    cell: ({ row }) => {
+      const date = new Date(row.getValue('visit_date'))
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      })
+    }
+  },
+  {
+  accessorKey: 'appointment_date',
+  header: 'Appointment',
+  cell: ({ row }) => {
+    const appointmentDate = row.original.appointment_date
+    if (!appointmentDate) return h('span', { class: 'text-gray-400' }, 'No appointment')
+
+    const date = new Date(appointmentDate)
+    return h('span', {}, date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false // Use 24-hour format; change to true for 12-hour format with AM/PM
+    }))
+  }
+},
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => {
+      const status = row.original.status || 'Unknown'
+
+      const badgeColor = {
+        completed: 'success',
+        'scheduled': 'info',
+        Scheduled: 'info',
+        cancelled: 'error'
+      }[status.toLowerCase()] || 'gray'
+
+      const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+
+      return h(UBadge, {
+        class: 'capitalize',
+        variant: 'subtle',
+        color: badgeColor
+      }, () => label)
+    }
   },
   {
     accessorKey: 'symptoms',
@@ -257,7 +309,7 @@ const createMedicalRecord = () => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
+  <div class="p-6 max-w-auto mx-auto">
     <h1 class="text-2xl font-semibold text-gray-900 mb-3">Medical Records</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">
@@ -281,13 +333,8 @@ const createMedicalRecord = () => {
           </div>
         </template>
 
-        <UTable 
-          ref="table" 
-          v-model:column-filters="columnFilters" 
-          :data="paginatedRecords" 
-          :columns="columns"
-          class="border border-gray-300 dark:border-gray-600 rounded-md"
-        >
+        <UTable ref="table" v-model:column-filters="columnFilters" :data="paginatedRecords" :columns="columns"
+          class="border border-gray-300 dark:border-gray-600 rounded-md">
           <template #actions-cell="{ row }">
             <UDropdownMenu :items="getDropdownActions(row.original)">
               <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" aria-label="Actions" />
@@ -297,13 +344,8 @@ const createMedicalRecord = () => {
 
         <div class="flex items-center justify-between pt-4 w-full px-0">
           <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
-          <UPagination 
-            :default-page="pagination.pageIndex + 1" 
-            :items-per-page="pagination.pageSize"
-            :total="filteredRecords.length" 
-            @update:page="(p) => pagination.pageIndex = p - 1"
-            class="pr-0" 
-          />
+          <UPagination :default-page="pagination.pageIndex + 1" :items-per-page="pagination.pageSize"
+            :total="filteredRecords.length" @update:page="(p) => pagination.pageIndex = p - 1" class="pr-0" />
         </div>
       </UCard>
     </div>

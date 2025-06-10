@@ -174,7 +174,7 @@ const fetchMedicalRecords = async (token: string) => {
 
 // View medical record function
 const viewMedicalRecord = (recordId: number) => {
-  router.push(`/medicalRecord/view/${recordId}`)
+  router.push(`/medRec/view/${recordId}`)
 }
 
 // Table columns for medical records

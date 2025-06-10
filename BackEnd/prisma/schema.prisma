@@ -54,7 +54,6 @@ model Veterinarians {
   user_id        Int              @unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
-  appointments   Appointments[]
   medicalRecords MedicalRecords[]
   user           Users            @relation("UserVeterinarian", fields: [user_id], references: [user_id])
 }
@@ -76,36 +75,21 @@ model Users {
 }
 
 model MedicalRecords {
-  record_id    Int            @id @default(autoincrement())
-  pet_id       Int
-  vet_id       Int
-  visit_date   DateTime
-  symptoms     String
-  diagnosis    String
-  treatment    String
-  medication   String
-  notes        String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime?      @updatedAt
-  appointments Appointments[]
-  pet          Pets           @relation(fields: [pet_id], references: [pet_id])
-  vet          Veterinarians  @relation(fields: [vet_id], references: [vet_id])
-}
-
-model Appointments {
-  appointment_id   Int               @id @default(autoincrement())
-  record_id        Int
-  vet_id           Int
-  appointment_date DateTime
-  note             String?
-  status           AppointmentStatus
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime?         @updatedAt
-  rec              MedicalRecords    @relation(fields: [record_id], references: [record_id])
-  vet              Veterinarians     @relation(fields: [vet_id], references: [vet_id])
-
-  @@index([record_id])
-  @@index([vet_id])
+  record_id         Int                @id @default(autoincrement())
+  pet_id            Int
+  vet_id            Int?               // Made optional with ?
+  visit_date        DateTime
+  symptoms          String
+  diagnosis         String
+  treatment         String
+  medication        String
+  notes             String
+  appointment_date  DateTime?
+  status            AppointmentStatus?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime?          @updatedAt
+  pet               Pets               @relation(fields: [pet_id], references: [pet_id])
+  vet               Veterinarians?     @relation(fields: [vet_id], references: [vet_id]) // Made optional with ?
 }
 
 enum UserRole {
@@ -115,8 +99,7 @@ enum UserRole {
 }
 
 enum AppointmentStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
+  SCHEDULED
   COMPLETED
+  CANCELLED
 }

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem } from '@nuxt/ui'
+import axios from 'axios'
 
 definePageMeta({
     layout: 'navbar2',
@@ -15,7 +16,7 @@ const toast = useToast()
 
 type SelectOption<T> = { label: string; value: T }
 
-    interface Vet {
+interface Vet {
     vet_id: number;
     license_number: string;
     experience: number;
@@ -37,29 +38,63 @@ interface Pet {
     pet_name: string;
 }
 
+// Define error interface for better type safety
+interface ApiError {
+    message?: string;
+    data?: {
+        message?: string;
+    };
+    response?: {
+        data?: {
+            message?: string;
+        };
+    };
+}
+
 const petList = ref<SelectOption<number>[]>([])
-const vetList = ref<SelectOption<number>[]>([])
-
-const items = ref<BreadcrumbItem[]>([
-    { label: 'Medical Records', icon: 'i-lucide-file-text', to: '/medicalRecord' },
-    { label: 'Create New Record', icon: 'i-lucide-plus', to: '/medicalRecord/create' }
+const statusOptions = ref<SelectOption<string>[]>([
+    { label: 'Scheduled', value: 'SCHEDULED' },
+    { label: 'Completed', value: 'COMPLETED' },
+    { label: 'Cancelled', value: 'CANCELLED' }
 ])
-
+const vetName = ref<string>('') // Store veterinarian name from /user/info
 const record = ref({
     pet_id: undefined as SelectOption<number> | undefined,
-    vet_id: undefined as SelectOption<number> | undefined,
+    vet_id: undefined as number | null | undefined, // Allow null for not found case
     visit_date: '',
     symptoms: '',
     diagnosis: '',
     treatment: '',
     medication: '',
-    notes: ''
+    notes: '',
+    appointment_date: '' as string | undefined,
+    status: undefined as SelectOption<string> | undefined
 })
 
 const loading = ref(false)
 const error = ref<string | null>(null)
 const token = ref<string | null>(null)
 const errors = ref<Record<string, string>>({})
+
+const items = ref<BreadcrumbItem[]>([
+    { label: 'Medical Records', icon: 'i-lucide-file-text', to: '/medicalRecord' },
+    { label: 'Create New Record', icon: 'i-lucide-plus', to: '/medicalRecord/create' }
+])
+
+// Helper function to extract error message
+function extractErrorMessage(err: unknown): string {
+    if (err && typeof err === 'object') {
+        const apiError = err as ApiError;
+        return apiError.data?.message ||
+            apiError.response?.data?.message ||
+            apiError.message ||
+            'An unknown error occurred';
+    }
+    if (typeof err === 'string') {
+        return err;
+    }
+    return 'An unknown error occurred';
+}
 
 onMounted(async () => {
     token.value = localStorage.getItem('authToken')
@@ -68,11 +103,83 @@ onMounted(async () => {
         return navigateTo('/login')
     }
 
-    await Promise.all([fetchPets(), fetchVets()])
+    try {
+        // Fetch user info to get veterinarian name
+        const userData = localStorage.getItem('user');
+        const email = userData ? JSON.parse(userData).email : null;
+        if (!email) {
+            throw new Error('User email not found');
+        }
+
+        console.log('Fetching user info for email:', email);
+        const userResponse = await axios.post(
+            'http://localhost:3001/user/info',
+            { email },
+            {
+                headers: {
+                    Authorization: `Bearer ${token.value}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        console.log('User info response:', userResponse.data);
+
+        // Set veterinarian name
+        vetName.value = userResponse.data.full_name || 'Unknown Veterinarian';
+
+        // Try to get vet_id from veterinarians API
+        console.log('Fetching veterinarians list to find vet_id...');
+        try {
+            const vetsResponse = await axios.get('http://localhost:3001/vets', {
+                headers: {
+                    Authorization: `Bearer ${token.value}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Veterinarians response:', vetsResponse.data);
+
+            // Find the vet that matches the current user's email
+            const currentVet = vetsResponse.data.find((vet: Vet) =>
+                vet.user.email === email
+            );
+
+            if (currentVet) {
+                record.value.vet_id = currentVet.vet_id;
+                console.log('Found vet_id:', record.value.vet_id);
+            } else {
+                console.warn('Current user not found in veterinarians list');
+                record.value.vet_id = null;
+            }
+        } catch (vetError) {
+
+            console.error('Error fetching veterinarians:', vetError);
+        }
+
+        console.log('Final vet_id:', record.value.vet_id);
+
+        // Fetch pets
+        await fetchPets();
+    } catch (err: unknown) {
+        console.error('Error in onMounted:', err);
+        const errorMessage = extractErrorMessage(err);
+        error.value = errorMessage;
+        toast.add({
+            title: 'Error',
+            description: errorMessage,
+            color: 'error'
+        });
+    }
 })
 
 async function fetchPets() {
     try {
+        // Add null check for token
+        if (!token.value) {
+            throw new Error('Authentication token not available');
+        }
+
         const data = await $fetch<Pet[]>('http://localhost:3001/pets', {
             headers: { Authorization: `Bearer ${token.value}` }
         })
@@ -81,7 +188,7 @@ async function fetchPets() {
             value: pet.pet_id
         }))
         console.log('Pets data:', petList.value)
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Error fetching pets:', err)
         toast.add({
             title: 'Error',
@@ -91,104 +198,155 @@ async function fetchPets() {
     }
 }
 
-async function fetchVets() {
-    loading.value = true
-    try {
-        const data = await $fetch<Vet[]>('http://localhost:3001/vets', {
-            headers: { Authorization: `Bearer ${token.value}` }
-        })
-        console.log('Vets data:', data)
-        
-        // แก้ไขการ map ข้อมูลให้เข้าถึง first_name และ last_name จาก user object
-        vetList.value = data.map(vet => ({
-            label: `${vet.user.first_name} ${vet.user.last_name}`,
-            value: vet.vet_id
-        }))
-        console.log('Mapped vetList:', vetList.value)
-    } catch (err: any) {
-        error.value = err?.data?.message || err.message || 'Failed to load veterinarians'
-        console.error('API Error Details:', err)
-        toast.add({
-            title: 'Error',
-            description: error.value || 'Unknown error occurred',
-            color: 'error'
-        })
-    } finally {
-        loading.value = false
-    }
-}
-
 function validate(): boolean {
+    console.log('=== Validation started ===');
     errors.value = {}
+
+    console.log('pet_id:', record.value.pet_id);
+    console.log('vet_id:', record.value.vet_id);
+    console.log('visit_date:', record.value.visit_date);
+
     if (!record.value.pet_id?.value) errors.value.pet_id = 'Required'
-    if (!record.value.vet_id?.value) errors.value.vet_id = 'Required'
     if (!record.value.visit_date) errors.value.visit_date = 'Required'
-    return Object.keys(errors.value).length === 0
+
+    if (record.value.vet_id === null) {
+        console.warn('vet_id is null - veterinarian not found in system');
+        errors.value.vet_id = 'Your account is not set up as a veterinarian. Please contact administrator.';
+    } else if (record.value.vet_id === undefined) {
+        console.warn('vet_id is undefined - still loading');
+        errors.value.vet_id = 'Still loading veterinarian information. Please wait...';
+    }
+
+    // Validate appointment date if provided
+    if (record.value.appointment_date) {
+        const appointmentDate = new Date(record.value.appointment_date)
+        if (isNaN(appointmentDate.getTime())) {
+            errors.value.appointment_date = 'Invalid appointment date format'
+        } else if (record.value.visit_date) {
+            const visitDate = new Date(record.value.visit_date)
+            if (!isNaN(visitDate.getTime()) && appointmentDate < visitDate) {
+                errors.value.appointment_date = 'Appointment date cannot be before visit date'
+            }
+        }
+    }
+
+    console.log('Validation errors:', errors.value);
+    const isValid = Object.keys(errors.value).length === 0;
+    console.log('Validation result:', isValid);
+
+    return isValid;
 }
 
 async function createRecord() {
+    console.log('=== createRecord function called ===');
+    console.log('Current record data:', record.value);
+
     if (!validate()) {
+        console.log('Validation failed:', errors.value);
         toast.add({
             title: 'Error',
             description: 'Please fill in all required fields',
             color: 'error'
-        })
-        return
+        });
+        return;
+    }
+    console.log('Validation passed');
+
+    // Additional check for vet_id
+    if (!record.value.vet_id) {
+        console.log('vet_id is missing:', record.value.vet_id);
+        toast.add({
+            title: 'Error',
+            description: 'Unable to determine veterinarian. Please refresh the page and try again.',
+            color: 'error'
+        });
+        return;
+    }
+    console.log('vet_id check passed:', record.value.vet_id);
+
+    // Check if token is available
+    if (!token.value) {
+        toast.add({
+            title: 'Error',
+            description: 'Authentication token not available. Please log in again.',
+            color: 'error'
+        });
+        return;
     }
 
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
+    console.log('Starting API call...');
 
     try {
-        // Convert date string to ISO DateTime format
-        const visitDateTime = new Date(record.value.visit_date + 'T00:00:00.000Z').toISOString()
-        
-        const payload = {
-            pet_id: record.value.pet_id?.value,
-            vet_id: record.value.vet_id?.value,
-            visit_date: visitDateTime, // Send as ISO DateTime
-            symptoms: record.value.symptoms,
-            diagnosis: record.value.diagnosis,
-            treatment: record.value.treatment,
-            medication: record.value.medication,
-            notes: record.value.notes
+        const visitDateTime = new Date(record.value.visit_date + 'T00:00:00.000Z').toISOString();
+        let appointmentDateTime = undefined;
+        if (record.value.appointment_date) {
+            appointmentDateTime = new Date(record.value.appointment_date).toISOString();
         }
 
-        await $fetch('http://localhost:3001/recs', {
+        const payload = {
+            pet_id: record.value.pet_id?.value,
+            vet_id: record.value.vet_id,
+            visit_date: visitDateTime,
+            symptoms: record.value.symptoms || '',
+            diagnosis: record.value.diagnosis || '',
+            treatment: record.value.treatment || '',
+            medication: record.value.medication || '',
+            notes: record.value.notes || '',
+            appointment_date: appointmentDateTime,
+            status: record.value.status?.value
+        };
+
+        console.log('Sending payload:', payload);
+        console.log('Token:', token.value ? 'Present' : 'Missing');
+
+        const response = await $fetch('http://localhost:3001/recs', {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token.value}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
-        })
+        });
+
+        console.log('API Response:', response);
 
         toast.add({
             title: 'Medical Record Created',
             description: 'New medical record has been created successfully.',
             color: 'success'
-        })
+        });
+
         await Swal.fire({
             title: 'Success!',
             text: 'Medical record has been created successfully.',
             icon: 'success',
             confirmButtonText: 'OK',
             confirmButtonColor: '#00C16A'
-        })
+        });
 
-        router.push('/medicalRecord')
-    } catch (err: any) {
-        error.value = err?.data?.message || err.message || 'Failed to create medical record'
-        console.error('API Error:', err)
+        console.log('Navigating to /medicalRecord');
+        router.push('/medicalRecord');
+    } catch (err: unknown) {
+        console.error('=== API Error Details ===');
+        console.error('Error object:', err);
+
+        const errorMessage = extractErrorMessage(err);
+        console.error('Extracted error message:', errorMessage);
+
+        error.value = errorMessage;
         toast.add({
             title: 'Error',
-            description: error.value || 'Unknown error occurred',
+            description: errorMessage,
             color: 'error'
-        })
+        });
     } finally {
-        loading.value = false
+        loading.value = false;
+        console.log('=== createRecord function completed ===');
     }
 }
+
 const today = new Date().toISOString().split('T')[0]
 </script>
 
@@ -206,8 +364,9 @@ const today = new Date().toISOString().split('T')[0]
                 {{ error }}
             </div>
 
-            <div v-if="vetList.length === 0 && !loading && !error" class="text-yellow-600 text-sm">
-                No veterinarians available. Please check the API.
+            <div v-if="petList.length === 0 && !loading && !error"
+                class="text-yellow-600 text-sm bg-yellow-50 p-4 rounded-md">
+                <p>No pets available. Please ensure the API is running.</p>
             </div>
 
             <div v-else>
@@ -221,14 +380,18 @@ const today = new Date().toISOString().split('T')[0]
 
                         <!-- Pet -->
                         <UFormField label="Pet" required class="w-full" :error="errors.pet_id">
-                            <USelectMenu v-model="record.pet_id" :items="petList" option-attribute="label"
-                                by="value" placeholder="Select pet" class="w-full" />
+                            <USelectMenu v-model="record.pet_id" :items="petList" option-attribute="label" by="value"
+                                placeholder="Select pet" class="w-full" />
                         </UFormField>
 
-                        <!-- Vet -->
-                        <UFormField label="Veterinarian" required class="w-full" :error="errors.vet_id">
-                            <USelectMenu v-model="record.vet_id" :items="vetList" option-attribute="label"
-                                by="value" placeholder="Select veterinarian" class="w-full" />
+                        <!-- Vet - Show automatically detected veterinarian -->
+                        <UFormField label="Veterinarian" class="w-full">
+                            <UInput :value="vetName || 'Loading...'" disabled class="w-full" />
+                            <template #hint>
+                                <span class="text-xs text-gray-500">
+                                    Automatically detected from your login session
+                                </span>
+                            </template>
                         </UFormField>
 
                         <!-- Symptoms -->
@@ -254,6 +417,18 @@ const today = new Date().toISOString().split('T')[0]
                         <!-- Notes -->
                         <UFormField label="Additional Notes" name="notes" class="w-full">
                             <UTextarea v-model="record.notes" class="w-full" />
+                        </UFormField>
+
+                        <!-- Appointment Date -->
+                        <UFormField label="Appointment Date" class="w-full" :error="errors.appointment_date">
+                            <UInput v-model="record.appointment_date" type="datetime-local" class="w-full"
+                                placeholder="Select appointment date and time (optional)" />
+                        </UFormField>
+
+                        <!-- Status -->
+                        <UFormField label="Appointment Status" class="w-full">
+                            <USelectMenu v-model="record.status" :items="statusOptions" option-attribute="label"
+                                by="value" placeholder="Select status (optional)" class="w-full" clearable />
                         </UFormField>
 
                         <div class="flex justify-end gap-4">
