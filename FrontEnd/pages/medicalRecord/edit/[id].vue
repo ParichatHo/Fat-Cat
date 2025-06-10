@@ -108,7 +108,7 @@ onMounted(async () => {
         );
         vetName.value = userResponse.data.full_name || 'Unknown Veterinarian';
 
-        // Fetch pets and record (skip fetchVets since we don’t need the dropdown)
+        // Fetch pets and record (skip fetchVets since we don't need the dropdown)
         await Promise.all([fetchPets()]).then(fetchRecord);
     } catch (err: any) {
         console.error('Error in onMounted:', err);
@@ -180,7 +180,7 @@ async function fetchRecord() {
         record.value = {
             pet_id: petOption,
             vet_id: data.vet_id, // Set vet_id directly
-            visit_date: formatDateForInput(data.visit_date),
+            visit_date: formatDateTimeForInput(data.visit_date), // เปลี่ยนให้ใช้ formatDateTimeForInput
             symptoms: data.symptoms || '',
             diagnosis: data.diagnosis || '',
             treatment: data.treatment || '',
@@ -267,7 +267,8 @@ async function updateRecord() {
     try {
         let visitDateTime: string;
         try {
-            visitDateTime = new Date(record.value.visit_date + 'T00:00:00.000Z').toISOString();
+            // ปรับการแปลง visit_date ให้รองรับทั้ง date และ datetime
+            visitDateTime = new Date(record.value.visit_date).toISOString();
         } catch (dateError) {
             throw new Error('Invalid visit date format');
         }
@@ -336,46 +337,34 @@ async function retryFetchRecord() {
     await fetchRecord()
 }
 
-const today = new Date().toISOString().split('T')[0]
-
-function formatDateForInput(dateString: string | null | undefined): string {
-    if (!dateString) return '';
-
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            console.warn('Invalid date string:', dateString);
-            return '';
-        }
-        return date.toISOString().split('T')[0];
-    } catch (error) {
-        console.error('Error formatting date:', error, dateString);
-        return '';
-    }
-}
-
 function formatDateTimeForInput(dateString: string | null | undefined): string {
     if (!dateString) return '';
-
+    
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) {
             console.warn('Invalid datetime string:', dateString);
             return '';
         }
-
+        
+        // ใช้ local time สำหรับ datetime-local input
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
-
+        
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch (error) {
         console.error('Error formatting datetime:', error, dateString);
         return '';
     }
 }
+
+// สร้าง max datetime สำหรับ visit date (วันและเวลาปัจจุบัน)
+const now = new Date();
+const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
 </script>
 
 <template>
@@ -422,9 +411,9 @@ function formatDateTimeForInput(dateString: string | null | undefined): string {
                     description="Update the details for the medical record.">
                     <form @submit.prevent="updateRecord" class="space-y-4">
 
-                        <!-- Visit Date -->
-                        <UFormField label="Visit Date" required class="w-full" :error="errors.visit_date">
-                            <UInput v-model="record.visit_date" type="date" :max="today" class="w-full" />
+                        <!-- Visit Date with Time -->
+                        <UFormField label="Visit Date & Time" required class="w-full" :error="errors.visit_date">
+                            <UInput v-model="record.visit_date" type="datetime-local" :max="maxDateTime" class="w-full" />
                         </UFormField>
 
                         <!-- Pet -->

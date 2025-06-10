@@ -78,7 +78,7 @@ function logout() {
       <img src="~/assets/img/logo5.png" alt="Logo" class="w-auto h-23 mt-1" />
     </template>
 
-    <UNavigationMenu :items="items" />
+    <UNavigationMenu :items="items" class="flex-grow" /> <!-- เพิ่ม flex-grow ที่นี่ -->
 
     <template #right>
       <div class="flex items-center space-x-4">
@@ -101,3 +101,4 @@ function logout() {
   </UHeader>
   <slot />
 </template>
+

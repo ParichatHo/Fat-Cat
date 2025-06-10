@@ -26,8 +26,8 @@ type MedicalRecord = {
   treatment: string
   medication: string
   notes: string
-  status: string // เพิ่ม status field
-  appointment_date: string // เพิ่ม appointment field
+  status: string
+  appointment_date: string
   createdAt: string
   updatedAt: string | null
   pet?: {
@@ -65,8 +65,8 @@ const filteredRecords = computed(() => {
       record.treatment || '',
       record.medication || '',
       record.notes || '',
-      record.status || '', // เพิ่ม status ในการค้นหา
-      record.appointment_date || '' // เพิ่ม appointment ในการค้นหา
+      record.status || '',
+      record.appointment_date || ''
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(keyword))
@@ -211,6 +211,19 @@ function getDropdownActions(record: MedicalRecord): DropdownMenuItem[] {
   ]
 }
 
+type Status = 'completed' | 'scheduled' | 'cancelled';
+type BadgeColor = 'success' | 'info' | 'error' | 'neutral' | undefined;
+
+function getStatusColor(status: string): BadgeColor {
+  const statusColors: Record<Status, BadgeColor> = {
+    completed: 'success',
+    scheduled: 'info',
+    cancelled: 'error'
+  };
+  const normalizedStatus = status.toLowerCase();
+  return (normalizedStatus in statusColors ? statusColors[normalizedStatus as Status] : 'neutral');
+}
+
 const columns: TableColumn<MedicalRecord>[] = [
   {
     accessorKey: 'record_id',
@@ -223,60 +236,25 @@ const columns: TableColumn<MedicalRecord>[] = [
     cell: ({ row }) => row.original.pet?.pet_name || 'Unknown Pet'
   },
   {
-    accessorKey: 'vet',
-    header: 'Veterinarian',
-    cell: ({ row }) =>
-      row.original.vet?.user ? `${row.original.vet.user.first_name} ${row.original.vet.user.last_name}` : `Vet ID ${row.original.vet_id}`
-  },
-  {
-    accessorKey: 'visit_date',
-    header: 'Visit Date',
+    accessorKey: 'appointment_date',
+    header: 'Appointment',
     cell: ({ row }) => {
-      const date = new Date(row.getValue('visit_date'))
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      })
+      const appointmentDate = row.original.appointment_date
+      if (!appointmentDate) return h('span', { class: 'text-gray-400' }, 'No appointment')
+      
+      return h('span', {}, formatDisplayDateTime(appointmentDate))
     }
   },
-  {
-  accessorKey: 'appointment_date',
-  header: 'Appointment',
-  cell: ({ row }) => {
-    const appointmentDate = row.original.appointment_date
-    if (!appointmentDate) return h('span', { class: 'text-gray-400' }, 'No appointment')
-
-    const date = new Date(appointmentDate)
-    return h('span', {}, date.toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false // Use 24-hour format; change to true for 12-hour format with AM/PM
-    }))
-  }
-},
   {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
-      const status = row.original.status || 'Unknown'
-
-      const badgeColor = {
-        completed: 'success',
-        'scheduled': 'info',
-        Scheduled: 'info',
-        cancelled: 'error'
-      }[status.toLowerCase()] || 'gray'
-
+      const status = row.original.status || 'No Status'
       const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
-
       return h(UBadge, {
         class: 'capitalize',
         variant: 'subtle',
-        color: badgeColor
+        color: getStatusColor(status)
       }, () => label)
     }
   },
@@ -306,10 +284,54 @@ const columns: TableColumn<MedicalRecord>[] = [
 const createMedicalRecord = () => {
   navigateTo('/medicalRecord/create')
 }
+
+function formatDisplayDate(dateString: string): string {
+  if (!dateString) return 'Not specified';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
+  } catch (error) {
+    console.error('Error formatting display date:', error);
+    return 'Invalid date';
+  }
+}
+
+function formatDisplayDateTime(dateString: string): string {
+  if (!dateString) return 'No appointment';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } catch (error) {
+    console.error('Error formatting display datetime:', error);
+    return 'Invalid date';
+  }
+}
 </script>
 
 <template>
-  <div class="p-6 max-w-auto mx-auto">
+  <div class="p-6 max-w-7xl mx-auto">
     <h1 class="text-2xl font-semibold text-gray-900 mb-3">Medical Records</h1>
 
     <div v-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md mb-4">

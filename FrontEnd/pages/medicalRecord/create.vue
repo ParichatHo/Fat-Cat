@@ -11,7 +11,6 @@ definePageMeta({
 })
 
 const router = useRouter()
-const route = useRoute()
 const toast = useToast()
 
 type SelectOption<T> = { label: string; value: T }
@@ -217,6 +216,20 @@ function validate(): boolean {
         errors.value.vet_id = 'Still loading veterinarian information. Please wait...';
     }
 
+    // Validate visit date format
+    if (record.value.visit_date) {
+        const visitDate = new Date(record.value.visit_date);
+        if (isNaN(visitDate.getTime())) {
+            errors.value.visit_date = 'Invalid visit date format';
+        } else {
+            // Check if visit date is in the future (more than current time)
+            const now = new Date();
+            if (visitDate > now) {
+                errors.value.visit_date = 'Visit date cannot be in the future';
+            }
+        }
+    }
+
     // Validate appointment date if provided
     if (record.value.appointment_date) {
         const appointmentDate = new Date(record.value.appointment_date)
@@ -279,7 +292,8 @@ async function createRecord() {
     console.log('Starting API call...');
 
     try {
-        const visitDateTime = new Date(record.value.visit_date + 'T00:00:00.000Z').toISOString();
+        // Use the visit_date directly since it now includes time
+        const visitDateTime = new Date(record.value.visit_date).toISOString();
         let appointmentDateTime = undefined;
         if (record.value.appointment_date) {
             appointmentDateTime = new Date(record.value.appointment_date).toISOString();
@@ -347,7 +361,9 @@ async function createRecord() {
     }
 }
 
-const today = new Date().toISOString().split('T')[0]
+// Get current datetime for max attribute (to prevent future dates)
+const now = new Date();
+const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T23:59`;
 </script>
 
 <template>
@@ -373,9 +389,10 @@ const today = new Date().toISOString().split('T')[0]
                 <UPageCard title="Medical Record Information"
                     description="Provide the necessary details for the new medical record.">
                     <form @submit.prevent="createRecord" class="space-y-4">
-                        <!-- Visit Date -->
-                        <UFormField label="Visit Date" required class="w-full" :error="errors.visit_date">
-                            <UInput v-model="record.visit_date" type="date" :max="today" class="w-full" />
+                        <!-- Visit Date with Time -->
+                        <UFormField label="Visit Date" name="visit_date" class="w-full">
+                            <UInput v-model="record.visit_date" type="datetime-local" :max="maxDateTime"
+                                class="w-full" />
                         </UFormField>
 
                         <!-- Pet -->
@@ -387,11 +404,6 @@ const today = new Date().toISOString().split('T')[0]
                         <!-- Vet - Show automatically detected veterinarian -->
                         <UFormField label="Veterinarian" class="w-full">
                             <UInput :value="vetName || 'Loading...'" disabled class="w-full" />
-                            <template #hint>
-                                <span class="text-xs text-gray-500">
-                                    Automatically detected from your login session
-                                </span>
-                            </template>
                         </UFormField>
 
                         <!-- Symptoms -->
