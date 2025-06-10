@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, h, computed } from 'vue'
+import { ref, onMounted, h, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem, DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import type { Table } from '@tanstack/vue-table'
+
+// เพิ่มการ resolve UBadge component
+const UBadge = resolveComponent('UBadge')
 
 definePageMeta({
   layout: 'navbar',
@@ -17,11 +20,28 @@ const petId = route.params.id as string
 const table = ref<Table<MedicalRecord> | null>(null)
 const globalFilter = ref('')
 const toast = useToast()
+const activeTab = ref<string>('details') // Track the active tab
 
 const items = ref<BreadcrumbItem[]>([
   { label: 'Pets', icon: 'i-lucide-paw-print', to: '/pet' },
   { label: 'View Pet Detail', icon: 'i-lucide-eye', to: `/pet/view/${petId}` }
 ])
+
+// Define tab items
+const tabs = [
+  {
+    key: 'details',
+    label: 'Pet Details',
+    description: 'General information about this pet.',
+    icon: 'i-lucide-heart',
+  },
+  {
+    key: 'medical',
+    label: 'Medical Records',
+    description: 'Medical history and treatment records.',
+    icon: 'i-lucide-file-text',
+  },
+]
 
 type Pet = {
   pet_id: number
@@ -50,6 +70,8 @@ type MedicalRecord = {
   treatment: string
   medication: string
   notes: string
+  status: string // เพิ่ม status field
+  appointment_date: string // เพิ่ม appointment_date field
   createdAt: string
   updatedAt: string | null
   pet?: {
@@ -98,7 +120,9 @@ const filteredRecords = computed(() => {
       record.diagnosis || '',
       record.treatment || '',
       record.medication || '',
-      record.notes || ''
+      record.notes || '',
+      record.status || '', // เพิ่ม status ในการค้นหา
+      record.appointment_date || '' // เพิ่ม appointment_date ในการค้นหา
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(keyword))
@@ -177,29 +201,109 @@ const viewMedicalRecord = (recordId: number) => {
   router.push(`/medRec/view/${recordId}`)
 }
 
-// Table columns for medical records
+// ฟังก์ชันสำหรับกำหนดสี Badge ตาม Status
+type Status = 'completed' | 'scheduled' | 'cancelled'
+type BadgeColor = 'success' | 'info' | 'error' | 'neutral' | undefined
+
+function getStatusColor(status: string): BadgeColor {
+  const statusColors: Record<Status, BadgeColor> = {
+    completed: 'success',
+    scheduled: 'info',
+    cancelled: 'error',
+  }
+  const normalizedStatus = status.toLowerCase()
+  return normalizedStatus in statusColors ? statusColors[normalizedStatus as Status] : 'neutral'
+}
+
+// ฟังก์ชันจัดรูปแบบวันที่และเวลา
+function formatDisplayDateTime(dateString: string): string {
+  if (!dateString) return 'No appointment'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Invalid date'
+    }
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+  } catch (error) {
+    console.error('Error formatting display datetime:', error)
+    return 'Invalid date'
+  }
+}
+
+// Table columns for medical records - เพิ่ม Appointment และ Status columns
 const columns: TableColumn<MedicalRecord>[] = [
   {
     accessorKey: 'record_id',
     header: 'ID',
     cell: ({ row }) => `#${row.original.record_id}`
   },
-  {
-    accessorKey: 'vet',
-    header: 'Veterinarian',
-    cell: ({ row }) =>
-      row.original.vet?.user ? `${row.original.vet.user.first_name} ${row.original.vet.user.last_name}` : `Vet ID ${row.original.vet_id}`
-  },
+
   {
     accessorKey: 'visit_date',
     header: 'Visit Date',
-    cell: ({ row }) => new Date(row.getValue('visit_date')).toLocaleDateString()
+    cell: ({ row }) => {
+      const visitDate = row.getValue('visit_date') as string
+      if (!visitDate) return h('span', { class: 'text-gray-400' }, 'No visit date')
+
+      try {
+        const date = new Date(visitDate)
+        if (isNaN(date.getTime())) {
+          return h('span', { class: 'text-gray-400' }, 'Invalid date')
+        }
+
+        const formattedDate = date.toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+
+        return h('span', {}, formattedDate)
+      } catch (error) {
+        console.error('Error formatting visit date:', error)
+        return h('span', { class: 'text-gray-400' }, 'Invalid date')
+      }
+    }
+  },
+  {
+    accessorKey: 'appointment_date',
+    header: 'Appointment',
+    cell: ({ row }) => {
+      const appointmentDate = row.original.appointment_date
+      if (!appointmentDate) return h('span', { class: 'text-gray-400' }, 'No appointment')
+      return h('span', {}, formatDisplayDateTime(appointmentDate))
+    },
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => {
+      const status = row.original.status || 'No Status'
+      const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+      return h(UBadge, {
+        class: 'capitalize',
+        variant: 'subtle',
+        color: getStatusColor(status),
+      }, () => label)
+    },
   },
   {
     accessorKey: 'symptoms',
     header: 'Symptoms',
-    cell: ({ row }) =>
-      h('div', { class: 'truncate max-w-24', title: row.getValue('symptoms') }, row.getValue('symptoms'))
+    cell: ({ row }) => {
+      const symptoms = row.getValue('symptoms') as string | undefined
+      if (!symptoms) return h('span', { class: 'text-gray-400' }, 'No symptoms recorded')
+      return h('div', { class: 'whitespace-normal break-words py-2 max-w-xs truncate', title: symptoms }, symptoms)
+    }
   },
   {
     id: 'actions',
@@ -287,75 +391,110 @@ const createMedicalRecord = () => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto p-6">
+  <div class="max-w-4xl mx-auto p-6">
     <div class="space-y-6">
-      <h1 class="text-xl font-semibold mb-5">View Pet Detail</h1>
-      <UBreadcrumb :items="items" />
+      <h1 class="text-xl font-semibold text-gray-900 mb-5">View Pet Detail</h1>
+      <div class="flex justify-between items-center">
+        <UBreadcrumb :items="items" />
+      </div>
 
-      <div v-if="loading" class="text-center text-gray-500">Loading pet data...</div>
-      <div v-else-if="error" class="text-red-600 text-center">{{ error }}</div>
+      <div v-if="loading" class="text-center py-10">
+        <div class="text-gray-500">Loading pet data...</div>
+      </div>
 
-      <div v-else-if="pet">
-        <!-- Layout แบบ Side by Side with Equal Height -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-stretch">
-          
-          <!-- Left Column: Pet Details -->
-          <div class="flex flex-col h-full">
-            <UPageCard 
-              title="Pet Details" 
-              description="Information about the selected pet."
-              spotlight 
-              spotlight-color="primary"
-              class="flex-1 flex flex-col h-full"
-            >
+      <div v-else-if="error" class="text-red-600 text-sm font-medium bg-red-50 p-4 rounded-md">
+        {{ error }}
+      </div>
+
+      <div v-else-if="pet" class="space-y-6">
+        <!-- Custom Tab Navigation -->
+        <div class="border-b border-gray-200">
+          <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button v-for="tab in tabs" :key="tab.key" @click="activeTab = tab.key" :class="[
+              activeTab === tab.key
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors duration-200'
+            ]">
+              <UIcon :name="tab.icon" class="w-4 h-4" />
+              <span>{{ tab.label }}</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="mt-6">
+          <!-- Pet Details Tab -->
+          <div v-if="activeTab === 'details'" class="space-y-4">
+            <div class="mb-4">
+              <p class="text-gray-600">General information about this pet.</p>
+            </div>
+            <UPageCard title="Pet Details" description="Information about the selected pet." spotlight
+              spotlight-color="primary">
               <div class="flex flex-col h-full">
                 <!-- แสดงรูปกับรายละเอียดข้างกัน -->
                 <div class="flex flex-col md:flex-row gap-6 flex-1">
-                  <!-- รูปภาพ -->
-                  <div class="flex-shrink-0">
+                  <!-- รูปภาพ - แก้ไขให้แสดง 50% -->
+                  <div class="w-full md:w-1/2 flex-shrink-0">
                     <img :src="pet.image_url || '/default-pet.png'" :alt="pet.pet_name"
-                      class="rounded-lg object-cover border border-gray-300 w-full md:w-48 h-72" />
+                      class="rounded-lg object-cover border border-gray-300 w-full h-72" />
                   </div>
 
-                  <!-- รายละเอียด -->
-                  <div class="flex-1 space-y-4 text-gray-800">
+                  <!-- รายละเอียด - แก้ไขให้แสดง 50% -->
+                  <div class="w-full md:w-1/2 space-y-4 text-gray-800">
                     <!-- ชื่อและ ID -->
                     <div>
                       <h2 class="text-2xl font-bold flex items-center gap-3 flex-wrap">
                         {{ pet.pet_name }}
-                        <UBadge color="primary" variant="soft" class="font-bold rounded-full">ID: {{ pet.pet_id }}</UBadge>
+                        <UBadge color="primary" variant="soft" class="font-bold rounded-full">ID: {{ pet.pet_id }}
+                        </UBadge>
                       </h2>
                     </div>
-                    
+
                     <!-- Grid ของข้อมูล -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <h3 class="font-semibold mb-1">Type</h3>
-                        <p class="text-sm text-gray-600">{{ pet.type?.type_name || '-' }}</p>
+                    <div class="space-y-4">
+                      <!-- Type และ Breed ในแถวเดียวกัน -->
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <h3 class="font-semibold mb-1">Type</h3>
+                          <p class="text-sm text-gray-600">{{ pet.type?.type_name || '-' }}</p>
+                        </div>
+                        <div>
+                          <h3 class="font-semibold mb-1">Breed</h3>
+                          <p class="text-sm text-gray-600">{{ pet.breed_name || '-' }}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 class="font-semibold mb-1">Breed</h3>
-                        <p class="text-sm text-gray-600">{{ pet.breed_name || '-' }}</p>
+
+                      <!-- Gender และ Owner ในแถวเดียวกัน -->
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <h3 class="font-semibold mb-1">Gender</h3>
+                          <p class="text-sm text-gray-600">{{ pet.gender || '-' }}</p>
+                        </div>
+                        <div>
+                          <h3 class="font-semibold mb-1">Owner</h3>
+                          <p class="text-sm text-gray-600">{{ pet.owner ? `${pet.owner.first_name}
+                            ${pet.owner.last_name}` : '-' }}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 class="font-semibold mb-1">Gender</h3>
-                        <p class="text-sm text-gray-600">{{ pet.gender || '-' }}</p>
+
+                      <!-- Birthdate และ Age ในแถวเดียวกัน -->
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <h3 class="font-semibold mb-1">Birthdate</h3>
+                          <p class="text-sm text-gray-600">{{ formatDate(pet.birth_date) }}</p>
+                        </div>
+                        <div>
+                          <h3 class="font-semibold mb-1">Age</h3>
+                          <p class="text-sm text-gray-600">{{ formatAge(pet.birth_date) }}</p>
+                        </div>
                       </div>
+
+                      <!-- Weight แถวเดียว -->
                       <div>
-                        <h3 class="font-semibold mb-1">Owner</h3>
-                        <p class="text-sm text-gray-600">{{ pet.owner ? `${pet.owner.first_name} ${pet.owner.last_name}` : '-' }}</p>
-                      </div>
-                      <div>
-                        <h3 class="font-semibold mb-1">Birthdate</h3>
-                        <p class="text-sm text-gray-600">{{ formatDate(pet.birth_date) }}</p>
-                      </div>
-                      <div>
-                        <h3 class="font-semibold mb-1">Age</h3>
-                        <p class="text-sm text-gray-600">{{ formatAge(pet.birth_date) }}</p>
-                      </div>
-                      <div class="sm:col-span-2">
                         <h3 class="font-semibold mb-1">Weight (kg)</h3>
-                        <p class="text-sm text-gray-600">{{ pet.weight !== undefined ? `${pet.weight.toFixed(1)} kg` : '-' }}</p>
+                        <p class="text-sm text-gray-600">{{ pet.weight !== undefined ? `${pet.weight.toFixed(1)} kg` :
+                          '-' }}</p>
                       </div>
                     </div>
                   </div>
@@ -364,55 +503,43 @@ const createMedicalRecord = () => {
             </UPageCard>
           </div>
 
-          <!-- Right Column: Medical Records -->
-          <div class="flex flex-col h-full">
+          <!-- Medical Records Tab -->
+          <div v-if="activeTab === 'medical'" class="space-y-4">
+            <div class="mb-4">
+              <p class="text-gray-600">Medical history and treatment records for this pet.</p>
+            </div>
+
             <div v-if="medicalRecordsError" class="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md">
               Failed to load medical records: {{ medicalRecordsError }}
             </div>
 
-            <div v-else-if="loadingMedicalRecords" class="flex-1 flex items-center justify-center text-gray-500">
-              Loading medical records...
+            <div v-else-if="loadingMedicalRecords" class="text-center py-10">
+              <div class="text-gray-500">Loading medical records...</div>
             </div>
 
             <!-- แสดงตารางเสมอ แม้ไม่มีข้อมูล -->
-            <div v-else class="flex-1 flex flex-col">
-              <UCard class="flex-1 flex flex-col">
+            <div v-else>
+              <UCard>
                 <template #header>
                   <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-semibold">Medical Records</h2>
                   </div>
                   <div class="flex justify-between items-center">
-                    <UInput 
-                      :model-value="globalFilter" 
-                      class="max-w-xs" 
-                      placeholder="Search records..."
-                      size="sm"
-                      @update:model-value="globalFilter = $event" 
-                    />
+                    <UInput :model-value="globalFilter" class="max-w-xs" placeholder="Search records..." size="sm"
+                      @update:model-value="globalFilter = $event" />
                   </div>
                 </template>
 
                 <div class="flex-1 flex flex-col">
                   <!-- ตารางจะแสดงเสมอ -->
                   <div class="flex-1">
-                    <UTable 
-                      ref="table" 
-                      v-model:column-filters="columnFilters" 
-                      :data="paginatedRecords" 
-                      :columns="columns"
-                      class="border border-gray-300 dark:border-gray-600 rounded-md h-full"
-                    >
+                    <UTable ref="table" v-model:column-filters="columnFilters" :data="paginatedRecords"
+                      :columns="columns" class="border border-gray-300 dark:border-gray-600 rounded-md h-full">
                       <template #actions-cell="{ row }">
-                        <UButton 
-                          icon="i-lucide-eye" 
-                          color="neutral" 
-                          variant="ghost" 
-                          size="sm"
-                          aria-label="View Medical Record"
-                          @click="viewMedicalRecord(row.original.record_id)"
-                        />
+                        <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="sm"
+                          aria-label="View Medical Record" @click="viewMedicalRecord(row.original.record_id)" />
                       </template>
-                      
+
                       <!-- แสดงข้อความเมื่อไม่มีข้อมูล -->
                       <template #empty-state>
                         <div class="text-center py-8">
@@ -423,7 +550,8 @@ const createMedicalRecord = () => {
                             </svg>
                           </div>
                           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No Medical Records</h3>
-                          <p class="text-gray-500 dark:text-gray-400 mb-4">This pet doesn't have any medical records yet.</p>
+                          <p class="text-gray-500 dark:text-gray-400 mb-4">This pet doesn't have any medical records
+                            yet.</p>
                           <UButton label="Add First Medical Record" color="primary" @click="createMedicalRecord"
                             icon="i-lucide-plus" />
                         </div>
@@ -432,27 +560,28 @@ const createMedicalRecord = () => {
                   </div>
 
                   <!-- Pagination section - แสดงเฉพาะเมื่อมีข้อมูลมากกว่า pageSize -->
-                  <div v-if="filteredRecords.length > pagination.pageSize" class="flex items-center justify-between pt-4 w-full px-0 dark:border-gray-700 mt-auto">
+                  <div v-if="filteredRecords.length > pagination.pageSize"
+                    class="flex items-center justify-between pt-4 w-full px-0 dark:border-gray-700 mt-auto">
                     <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
-                    <UPagination
-                      :default-page="pagination.pageIndex + 1"
-                      :items-per-page="pagination.pageSize"
-                      :total="filteredRecords.length"
-                      @update:page="handlePageChange"
-                      class="pr-0"
-                    />
+                    <UPagination :default-page="pagination.pageIndex + 1" :items-per-page="pagination.pageSize"
+                      :total="filteredRecords.length" @update:page="handlePageChange" class="pr-0" />
                   </div>
-                  
+
                   <!-- แสดงเฉพาะ showingText เมื่อมีข้อมูลแต่น้อยกว่าหรือเท่ากับ pageSize -->
-                  <div v-else-if="filteredRecords.length > 0" class="flex items-center justify-start pt-4 w-full px-0 dark:border-gray-700 mt-auto">
+                  <div v-else-if="filteredRecords.length > 0"
+                    class="flex items-center justify-start pt-4 w-full px-0 dark:border-gray-700 mt-auto">
                     <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
                   </div>
                 </div>
               </UCard>
             </div>
           </div>
-
         </div>
+      </div>
+
+      <div v-else class="text-center py-10">
+        <div class="text-gray-500 mb-4">Pet not found</div>
+        <UButton label="Back to Pets" color="primary" variant="outline" @click="router.push('/pet')" />
       </div>
     </div>
   </div>
