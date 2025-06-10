@@ -14,6 +14,7 @@ definePageMeta({
 
 type User = {
   user_id: string
+  image_url?: string
   first_name: string
   last_name: string
   phone: string
@@ -138,6 +139,15 @@ function getDropdownActions(user: User): DropdownMenuItem[] {
 function onDropdownSelect(item: DropdownMenuItem) {
   // Handle dropdown select if needed
 }
+
+// เพิ่มฟังก์ชันฟอร์แมตหมายเลขโทรศัพท์
+const formatPhoneNumber = (phone: string) => {
+  const digits = phone.replace(/\D/g, '') // ลบตัวอักษรที่ไม่ใช่ตัวเลข
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+}
+
 // Column definitions for the table
 const columns: TableColumn<User>[] = [
   {
@@ -148,9 +158,28 @@ const columns: TableColumn<User>[] = [
       return `#${userId}`
     }
   },
+  {
+    id: 'img',
+    // header: 'Image',
+    cell: ({ row }) => {
+      const user = row.original
+      return h('img', {
+        src: user.image_url || '/default-user.png', // ใช้ URL ของรูปภาพ หรือรูปที่มีค่า default
+        alt: user.first_name,
+        class: 'w-10 h-10 rounded-full object-cover'
+      })
+    }
+  },
   { accessorKey: 'first_name', header: 'First Name' },
   { accessorKey: 'last_name', header: 'Last Name' },
-  { accessorKey: 'phone', header: 'Phone' },
+  {
+    accessorKey: 'phone',
+    header: 'Phone',
+    cell: ({ row }) => {
+      const phone = row.getValue('phone') as string
+      return formatPhoneNumber(phone)
+    }
+  },
   {
     accessorKey: 'email',
     header: 'Email',

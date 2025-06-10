@@ -49,6 +49,8 @@ model Pets {
 model Veterinarians {
   vet_id         Int              @id @default(autoincrement())
   license_number String           @unique
+  experience     Int?
+  education      String?
   user_id        Int              @unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
@@ -58,16 +60,17 @@ model Veterinarians {
 }
 
 model Users {
-  user_id      Int            @id @default(autoincrement())
+  user_id      Int             @id @default(autoincrement())
   first_name   String
   last_name    String
-  email        String         @unique
+  email        String          @unique
   password     String
   phone        String
   role         UserRole
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime?      @updatedAt
-  veterinarian Veterinarians? @relation("UserVeterinarian")
+  image_url    String? 
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime?       @updatedAt
+  veterinarian Veterinarians?  @relation("UserVeterinarian")
 
   @@index([role])
 }
@@ -87,9 +90,6 @@ model MedicalRecords {
   appointments Appointments[]
   pet          Pets           @relation(fields: [pet_id], references: [pet_id])
   vet          Veterinarians  @relation(fields: [vet_id], references: [vet_id])
-
-  @@index([pet_id])
-  @@index([vet_id])
 }
 
 model Appointments {

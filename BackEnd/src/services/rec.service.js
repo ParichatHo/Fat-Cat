@@ -2,11 +2,36 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const getAllRecs = async () => {
-    return await prisma.medicalRecords.findMany();
+    return await prisma.medicalRecords.findMany({
+        include: {
+            pet: true,          // รวมข้อมูล pet
+            vet: {              // รวมข้อมูล veterinarian
+                include: {
+                    user: true      // รวมข้อมูล user ที่เชื่อมโยงกับ veterinarian
+                }
+            }
+        }
+    });
 };
 
+
+
 const getRecById = async (record_id) => {
-    return await prisma.medicalRecords.findUnique({ where: { record_id: Number(record_id) } });
+    return await prisma.medicalRecords.findUnique({ 
+        where: { record_id: Number(record_id) },
+        include: {
+            pet: {
+                include: {
+                    owner: true     
+                }
+            },
+            vet: {             
+                include: {
+                    user: true      
+                }
+            }
+        }
+    });
 }
 
 const createRec = async (data) => {

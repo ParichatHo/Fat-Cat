@@ -12,10 +12,10 @@ const user = computed(() => {
   return userData ? JSON.parse(userData) : null
 })
 
-// ตั้งค่า userName และ userRole จาก API
+// ตั้งค่า userName, userRole และ userAvatar
 const userName = ref('Guest')
 const userRole = ref('N/A')
-const userAvatar = ref('https://i.pinimg.com/736x/33/4f/6e/334f6eae058525b81f1a4103f1d720db.jpg')
+const userAvatar = ref('https://i.pinimg.com/736x/33/4f/6e/334f6eae058525b81f1a4103f1d720db.jpg') // Default fallback avatar
 
 onMounted(async () => {
   const token = localStorage.getItem('authToken')
@@ -39,8 +39,8 @@ onMounted(async () => {
     )
     userName.value = response.data.full_name
     userRole.value = response.data.role
-    // ถ้า API คืน avatarUrl สามารถเพิ่มได้
-    // userAvatar.value = response.data.avatarUrl || userAvatar.value
+    // ดึง image_url จาก API response ถ้ามี, ถ้าไม่มีใช้ค่า default
+    userAvatar.value = response.data.image_url || userAvatar.value
   } catch (error) {
     console.error('Failed to fetch user info:', error)
     router.push('/')
@@ -71,7 +71,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   },
   {
     label: 'User',
-    to: '/users',
+    to: '/user',
     icon: 'i-lucide-user-pen',
   },
 ])
@@ -98,7 +98,7 @@ function logout() {
     <template #right>
       <div class="flex items-center space-x-4">
         <UColorModeButton />
-        <UUser :name="userName" :description="userRole" :avatar="{ src: userAvatar }"
+        <UUser :name="userName" :description="userRole" :avatar="{ src: userAvatar }" 
           :chip="{ color: 'primary', position: 'top-right' }" />
         <UButton size="md" color="neutral" variant="outline" @click="logout">
           Logout

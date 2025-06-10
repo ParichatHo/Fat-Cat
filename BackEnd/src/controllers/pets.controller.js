@@ -42,7 +42,7 @@ const getPetById = {
 const createPet = {
     description: "Create new pet",
     tags: ["api", "pets"],
-    auth: false, 
+    auth: false,
     plugins: {
         'hapi-swagger': {
             consumes: ['multipart/form-data'],
@@ -88,7 +88,7 @@ const updatePet = {
         try {
             const { payload } = request;
             console.log('Payload received:', payload); // Debug log
-            
+
             const file = payload.image_file;
             const removeImage = payload.remove_image === 'true';
 
@@ -96,25 +96,25 @@ const updatePet = {
             if (file && file.path) {
                 const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
                 if (!validTypes.includes(file.headers['content-type'])) {
-                    return h.response({ 
-                        message: 'Invalid file type. Only JPEG, JPG, PNG, WebP are allowed' 
+                    return h.response({
+                        message: 'Invalid file type. Only JPEG, JPG, PNG, WebP are allowed'
                     }).code(400);
                 }
                 if (file._data && file._data.length > 5 * 1024 * 1024) {
-                    return h.response({ 
-                        message: 'File size exceeds 5MB limit' 
+                    return h.response({
+                        message: 'File size exceeds 5MB limit'
                     }).code(400);
                 }
             }
 
-            console.log('File info:', file ? { 
-                filename: file.filename, 
+            console.log('File info:', file ? {
+                filename: file.filename,
                 contentType: file.headers['content-type'],
-                path: file.path 
+                path: file.path
             } : 'No file');
 
             const updatedPet = await petService.updatePet(Number(pet_id), payload, file, removeImage);
-            
+
             return h.response({
                 message: 'Pet updated successfully',
                 data: updatedPet
@@ -131,24 +131,24 @@ const updatePet = {
 
 //   Delete pets
 const deletePet = {
-  description: "Delete pets by pet_id",
-  tags: ["api", "pets"],
-  auth: false,
-  handler: async (request, h) => {
-    const { pet_id } = request.params;
-    try {
-      const pets = await petService.getPetById(Number(pet_id));
+    description: "Delete pets by pet_id",
+    tags: ["api", "pets"],
+    auth: false,
+    handler: async (request, h) => {
+        const { pet_id } = request.params;
+        try {
+            const pets = await petService.getPetById(Number(pet_id));
 
-      if (!pets) {
-        return h.response({ message: "pet not found" }).code(404);
-      }
-      await petService.deletePet(Number(pet_id));
-      return h.response({ message: "pet deleted successfully" }).code(200);
-    } catch (error) {
-      console.error("Error deleting pet:", error);
-      return h.response({ message: "Failed to delete pets" }).code(500);
-    }
-  },
+            if (!pets) {
+                return h.response({ message: "pet not found" }).code(404);
+            }
+            await petService.deletePet(Number(pet_id));
+            return h.response({ message: "pet deleted successfully" }).code(200);
+        } catch (error) {
+            console.error("Error deleting pet:", error);
+            return h.response({ message: "Failed to delete pets" }).code(500);
+        }
+    },
 };
 
 module.exports = {

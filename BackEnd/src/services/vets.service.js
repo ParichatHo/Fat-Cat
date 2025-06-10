@@ -2,8 +2,13 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const getAllVets = async () => {
-    return await prisma.veterinarians.findMany();
+    return await prisma.veterinarians.findMany({
+        include: {         
+            user: true 
+        }
+    });
 };
+
 
 const getVetById = async (vet_id) => {
     return await prisma.veterinarians.findUnique({ where: { vet_id: Number(vet_id) } });
@@ -18,7 +23,7 @@ const updateVet = async (vet_id, data) => {
 }
 
 const deleteVet = async (vet_id) => {
-    return await prisma.veterinarians.delete({ where: {vet_id: Number(vet_id)} });
+    return await prisma.veterinarians.delete({ where: { vet_id: Number(vet_id) } });
 }
 
 

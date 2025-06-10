@@ -3,6 +3,7 @@ const userService = require("../services/users.service");
 const validateZod = require("../validations/validateZod")
 const { loginSchema } = require("../validations/auth.validation");
 const { userInfoSchema } = require("../validations/auth.validation");
+const { image } = require("../utils/cloudinary");
 
 const login = {
   description: "User login and get JWT token",
@@ -73,6 +74,7 @@ const userInfo = {
       return h.response({
         full_name: `${userRecord.first_name} ${userRecord.last_name}`,
         role: `${userRecord.role}`,
+        image_url: `${userRecord.image_url}`,
         // เพิ่มข้อมูลอื่น ๆ ถ้าต้องการ
       }).code(200);
 
