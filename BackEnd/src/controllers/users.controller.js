@@ -52,9 +52,43 @@ const createUser = {
         strategy: "jwt",
         scope: ["STAFF"],
     },
+    // Add these payload configuration options to handle multipart/form-data
+    plugins: {
+        'hapi-swagger': {
+            consumes: ['multipart/form-data'],
+        },
+    },
+    payload: {
+        maxBytes: 5 * 1024 * 1024, // Limit to 5MB
+        parse: true,
+        output: 'file',
+        multipart: true,
+        // Allow unknown fields
+        allow: 'multipart/form-data'
+    },
     handler: async (request, h) => {
         try {
-            const { role, license_number } = request.payload;
+            const { payload } = request;
+            console.log('Create payload received:', payload);
+
+            const file = payload.image_file;
+            
+            // Validate file if provided
+            if (file && file.path) {
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+                if (!validTypes.includes(file.headers['content-type'])) {
+                    return h.response({
+                        message: 'Invalid file type. Only JPEG, JPG, PNG, WebP are allowed'
+                    }).code(400);
+                }
+                if (file._data && file._data.length > 5 * 1024 * 1024) {
+                    return h.response({
+                        message: 'File size exceeds 5MB limit'
+                    }).code(400);
+                }
+            }
+
+            const { role, license_number } = payload;
             
             // Validate VETERINARIAN role requirements
             if (role === 'VETERINARIAN' && !license_number) {
@@ -63,7 +97,14 @@ const createUser = {
                 }).code(400);
             }
 
-            const newUser = await userService.createUser(request.payload);
+            console.log('File info:', file ? {
+                filename: file.filename,
+                contentType: file.headers['content-type'],
+                path: file.path
+            } : 'No file');
+
+            // Pass the file to the service
+            const newUser = await userService.createUser(payload, file);
             
             // Remove password from response
             const { password, ...userResponse } = newUser;
@@ -81,7 +122,10 @@ const createUser = {
                 return h.response({ message: error.message }).code(400);
             }
             
-            return h.response({ message: "Failed to create user" }).code(500);
+            return h.response({ 
+                message: error.message || "Failed to create user",
+                error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            }).code(500);
         }
     },
 };

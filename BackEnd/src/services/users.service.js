@@ -39,7 +39,7 @@ const getUserById = async (user_id) => {
 };
 
 // Create user with veterinarian data if role is VETERINARIAN
-const createUser = async (data) => {
+const createUser = async (data, file) => {
     if (!data.password) {
         throw new Error("Password is required");
     }
@@ -84,6 +84,26 @@ const createUser = async (data) => {
 
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
 
+    // Handle image upload
+    let imageUrl = null;
+    if (file && file.path) {
+        try {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'users',
+                resource_type: 'image',
+                transformation: [
+                    { width: 800, height: 600, crop: 'limit' },
+                    { quality: 'auto:good' }
+                ]
+            });
+            imageUrl = result.secure_url;
+            console.log('Image uploaded to Cloudinary:', result.secure_url);
+        } catch (error) {
+            console.error('Failed to upload image to Cloudinary:', error);
+            throw new Error('Failed to upload image: ' + error.message);
+        }
+    }
+
     // Use transaction to ensure data integrity
     return await prisma.$transaction(async (tx) => {
         // Create user first
@@ -95,7 +115,7 @@ const createUser = async (data) => {
                 password: hashedPassword,
                 phone: data.phone,
                 role: data.role,
-                image_url: data.image_url || null,
+                image_url: imageUrl,
             }
         });
 
