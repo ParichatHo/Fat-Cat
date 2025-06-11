@@ -93,8 +93,7 @@ const dropdownItems = computed<DropdownMenuItem[][]>(() => [
       label: 'Profile',
       icon: 'i-lucide-user',
       onSelect() {
-        console.log('Profile clicked')
-        // เพิ่ม navigation หรือ action สำหรับ profile
+        router.push('/profile')
       }
     },
     {
@@ -121,33 +120,33 @@ const dropdownItems = computed<DropdownMenuItem[][]>(() => [
 async function logout() {
   try {
     console.log('Starting logout process...')
-    
+
     // ลบข้อมูลจาก localStorage และ sessionStorage
     if (process.client) {
       localStorage.removeItem('authToken')
       localStorage.removeItem('user')
       sessionStorage.removeItem('authToken')
-      
+
       // ลบ cookies
       document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname
       document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
-      
+
       // ลบ cookies อีกรูปแบบ
       document.cookie = 'authToken=; Max-Age=0; path=/;'
     }
-    
+
     console.log('Storage cleared, navigating to home...')
-    
+
     // ใช้ navigateTo แทน router.push (Nuxt 3 way)
     await navigateTo('/')
-    
+
     // รอให้ navigation เสร็จแล้วค่อย reload
     setTimeout(() => {
       if (process.client) {
         window.location.reload()
       }
     }, 100)
-    
+
   } catch (error) {
     console.error('Logout error:', error)
     // Fallback: บังคับ redirect
@@ -169,24 +168,19 @@ async function logout() {
     <template #right>
       <div class="flex items-center space-x-4">
         <UColorModeButton />
-        
-        <!-- Profile Dropdown - ใช้โครงสร้างเดียวกับตัวอย่าง -->
-        <UDropdownMenu
-          :items="dropdownItems"
-          :ui="{
-            content: 'w-56'
-          }"
-        >
-          <div class="relative cursor-pointer bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors duration-200">
+
+        <UDropdownMenu :items="dropdownItems" :ui="{
+          content: 'w-56'
+        }">
+          <div
+            class="relative cursor-pointer bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors duration-200">
             <div class="flex items-center space-x-3">
               <div class="relative">
-                <img 
-                  :src="userAvatar" 
-                  :alt="userName"
-                  class="w-8 h-8 rounded-full object-cover"
-                />
+                <img :src="userAvatar" :alt="userName" class="w-8 h-8 rounded-full object-cover" />
                 <!-- Online indicator (green dot) -->
-                <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                <div
+                  class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
+                </div>
               </div>
               <div class="flex flex-col">
                 <span class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</span>

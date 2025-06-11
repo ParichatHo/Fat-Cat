@@ -72,10 +72,12 @@ const userInfo = {
       }
 
       return h.response({
+        user_id: `${userRecord.user_id}`,
         full_name: `${userRecord.first_name} ${userRecord.last_name}`,
         role: `${userRecord.role}`,
         image_url: `${userRecord.image_url}`,
-        
+        phone: `${userRecord.phone}`,
+        email: `${userRecord.email}`,
         // เพิ่มข้อมูลอื่น ๆ ถ้าต้องการ
       }).code(200);
 
