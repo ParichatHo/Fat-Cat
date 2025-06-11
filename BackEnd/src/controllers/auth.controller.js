@@ -1,4 +1,4 @@
-const { signToken } = require("../utils/jwt");
+const { signToken, verifyToken } = require("../utils/jwt"); // เพิ่ม verifyToken
 const userService = require("../services/users.service");
 const validateZod = require("../validations/validateZod")
 const { loginSchema } = require("../validations/auth.validation");
@@ -26,19 +26,29 @@ const login = {
         return h.response("Invalid credentials").code(401)
       }
   
-      const token = signToken({ sub: userRecord.id, role: userRecord.role });
+      // แก้ไข: ใช้ user_id แทน id
+      const token = signToken({ sub: userRecord.user_id, role: userRecord.role });
 
       const safeUser = {
-        id: userRecord.id,
+        user_id: userRecord.user_id, // แก้ไข: ใช้ user_id
         firstName: userRecord.first_name,
         lastName: userRecord.last_name,
         email: userRecord.email,
-        role: userRecord.role
+        role: userRecord.role,
+        phone: userRecord.phone,
+        image_url: userRecord.image_url,
+        // เพิ่มข้อมูล veterinarian ถ้ามี
+        veterinarian: userRecord.veterinarian ? {
+          vet_id: userRecord.veterinarian.vet_id,
+          license_number: userRecord.veterinarian.license_number,
+          experience: userRecord.veterinarian.experience,
+          education: userRecord.veterinarian.education
+        } : null
       };
       return h.response({ token, user: safeUser }).code(200)
     } catch (err) {
       console.error(err);
-      return error(h, err.message);
+      return h.response({ message: err.message }).code(500); // แก้ไข error handling
     }
   }
 }
@@ -71,15 +81,33 @@ const userInfo = {
         return h.response({ message: "User not found" }).code(404);
       }
 
-      return h.response({
-        user_id: `${userRecord.user_id}`,
+      // สร้าง response object พื้นฐาน
+      const userResponse = {
+        user_id: userRecord.user_id,
         full_name: `${userRecord.first_name} ${userRecord.last_name}`,
-        role: `${userRecord.role}`,
-        image_url: `${userRecord.image_url}`,
-        phone: `${userRecord.phone}`,
-        email: `${userRecord.email}`,
-        // เพิ่มข้อมูลอื่น ๆ ถ้าต้องการ
-      }).code(200);
+        first_name: userRecord.first_name,
+        last_name: userRecord.last_name,
+        role: userRecord.role,
+        image_url: userRecord.image_url,
+        phone: userRecord.phone,
+        email: userRecord.email,
+        created_at: userRecord.createdAt,
+        updated_at: userRecord.updatedAt
+      };
+
+      // เพิ่มข้อมูล veterinarian ถ้า user เป็น VETERINARIAN และมีข้อมูล vet
+      if (userRecord.role === 'VETERINARIAN' && userRecord.veterinarian) {
+        userResponse.veterinarian = {
+          vet_id: userRecord.veterinarian.vet_id,
+          license_number: userRecord.veterinarian.license_number,
+          experience: userRecord.veterinarian.experience,
+          education: userRecord.veterinarian.education,
+          created_at: userRecord.veterinarian.createdAt,
+          updated_at: userRecord.veterinarian.updatedAt
+        };
+      }
+
+      return h.response(userResponse).code(200);
 
     } catch (error) {
       console.error(error);

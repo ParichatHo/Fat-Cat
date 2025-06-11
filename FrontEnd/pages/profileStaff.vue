@@ -116,6 +116,9 @@ const editProfile = () => {
     <div class="space-y-4">
       <div class="flex justify-between items-center">
         <h1 class="text-xl font-semibold">My Profile</h1>
+        <!-- <UButton @click="editProfile" color="primary" size="lg" icon="i-lucide-edit-3">
+            Edit Profile
+          </UButton> -->
       </div>
 
       <div v-if="loading" class="text-center text-gray-500">Loading profile data...</div>
@@ -205,15 +208,6 @@ const editProfile = () => {
                     </h3>
                     <p class="text-sm text-gray-600 mt-1">Your veterinarian credentials and qualifications</p>
                   </div>
-                  <UButton 
-                    @click="router.push('/profile/edit?section=professional')" 
-                    color="neutral" 
-                    variant="ghost"
-                    icon="i-lucide-edit"
-                    size="sm"
-                  >
-                    Edit
-                  </UButton>
                 </div>
               </div>
               
@@ -256,12 +250,12 @@ const editProfile = () => {
             </div>
 
             <!-- Quick Actions Section -->
-            <div class="border-t border-gray-200 pt-8">
+            <div class="border-t border-gray-200 pt-4">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <UButton 
                   @click="router.push('/profile/edit')" 
-                  color="primary" 
+                  color="neutral" 
                   variant="outline" 
                   block
                   icon="i-lucide-edit"
