@@ -8,7 +8,7 @@ const getAllUsers = {
         strategy: "jwt",
         scope: ["STAFF"],
     },
-    handler: async (Request, h) => {
+    handler: async (request, h) => {
         try {
             const users = await userService.getAllUsers();
             return h.response(users).code(200);
@@ -19,9 +19,9 @@ const getAllUsers = {
     },
 };
 
-// GetById users
+// Get user by ID
 const getUserById = {
-    description: "Get list of all users",
+    description: "Get user by ID",
     tags: ["api", "users"],
     auth: {
         strategy: "jwt",
@@ -30,40 +30,63 @@ const getUserById = {
     handler: async (request, h) => {
         const { user_id } = request.params;
         try {
-            const users = await userService.getUserById(Number(user_id));
+            const user = await userService.getUserById(Number(user_id));
 
-            if (!users) {
-                return h.response({ message: "users not found" }).code(404);
+            if (!user) {
+                return h.response({ message: "User not found" }).code(404);
             }
 
-            return h.response(users).code(200);
+            return h.response(user).code(200);
         } catch (error) {
-            console.error("Error fetching users:", error);
-            return h.response({ message: "Failed to fetch users" }).code(500);
+            console.error("Error fetching user:", error);
+            return h.response({ message: "Failed to fetch user" }).code(500);
         }
     },
 };
 
-//   Create users
+// Create user
 const createUser = {
     description: "Create new User",
-    tags: ["api", "User"],
+    tags: ["api", "users"],
     auth: {
         strategy: "jwt",
         scope: ["STAFF"],
     },
     handler: async (request, h) => {
         try {
+            const { role, license_number } = request.payload;
+            
+            // Validate VETERINARIAN role requirements
+            if (role === 'VETERINARIAN' && !license_number) {
+                return h.response({ 
+                    message: "License number is required for veterinarian role" 
+                }).code(400);
+            }
+
             const newUser = await userService.createUser(request.payload);
-            return h.response(newUser).code(201);
+            
+            // Remove password from response
+            const { password, ...userResponse } = newUser;
+            
+            return h.response({
+                message: "User created successfully",
+                data: userResponse
+            }).code(201);
         } catch (error) {
-            console.error("Error creating User:", error);
-            return h.response({ message: "Failed to create User" }).code(500);
+            console.error("Error creating user:", error);
+            
+            // Handle specific error messages
+            if (error.message.includes("already exists") || 
+                error.message.includes("required")) {
+                return h.response({ message: error.message }).code(400);
+            }
+            
+            return h.response({ message: "Failed to create user" }).code(500);
         }
     },
 };
 
-//   Update users
+// Update user
 const updateUser = {
     description: "Update user by user_id",
     tags: ["api", "users"],
@@ -86,10 +109,10 @@ const updateUser = {
         const { user_id } = request.params;
         try {
             const { payload } = request;
-            console.log('Payload received:', payload); // Debug log
+            console.log('Payload received:', payload);
 
-            const file = payload.image_file; // Image field name
-            const removeImage = payload.remove_image === 'true'; // Option to remove image
+            const file = payload.image_file;
+            const removeImage = payload.remove_image === 'true';
 
             // Validate file if provided
             if (file && file.path) {
@@ -105,32 +128,57 @@ const updateUser = {
                     }).code(400);
                 }
             }
-            
+
+            // Validate VETERINARIAN role requirements
+            if (payload.role === 'VETERINARIAN' && !payload.license_number) {
+                return h.response({ 
+                    message: "License number is required for veterinarian role" 
+                }).code(400);
+            }
+
             console.log('File info:', file ? {
                 filename: file.filename,
                 contentType: file.headers['content-type'],
                 path: file.path
             } : 'No file');
 
-            const updatedUser = await userService.updateUser(Number(user_id), payload, file, removeImage); // Pass image to userService
+            const updatedUser = await userService.updateUser(
+                Number(user_id), 
+                payload, 
+                file, 
+                removeImage
+            );
+            
+            // Remove password from response
+            const { password, ...userResponse } = updatedUser;
             
             return h.response({
                 message: 'User updated successfully',
-                data: updatedUser,
+                data: userResponse,
             }).code(200);
         } catch (error) {
             console.error("Error updating user:", error);
+            
+            // Handle specific error messages
+            if (error.message.includes("not found")) {
+                return h.response({ message: error.message }).code(404);
+            }
+            if (error.message.includes("already") || 
+                error.message.includes("required")) {
+                return h.response({ message: error.message }).code(400);
+            }
+            
             return h.response({
                 message: error.message || "Failed to update user",
-                error: error.stack // เพิ่ม stack trace สำหรับ debug
+                error: process.env.NODE_ENV === 'development' ? error.stack : undefined
             }).code(500);
         }
     },
 };
 
-//   Delete users
+// Delete user
 const deleteUser = {
-    description: "Delete users by user_id",
+    description: "Delete user by user_id",
     tags: ["api", "users"],
     auth: {
         strategy: "jwt",
@@ -139,16 +187,17 @@ const deleteUser = {
     handler: async (request, h) => {
         const { user_id } = request.params;
         try {
-            const users = await userService.getUserById(Number(user_id));
+            const user = await userService.getUserById(Number(user_id));
 
-            if (!users) {
-                return h.response({ message: "user not found" }).code(404);
+            if (!user) {
+                return h.response({ message: "User not found" }).code(404);
             }
+            
             await userService.deleteUser(Number(user_id));
-            return h.response({ message: "user deleted successfully" }).code(200);
+            return h.response({ message: "User deleted successfully" }).code(200);
         } catch (error) {
             console.error("Error deleting user:", error);
-            return h.response({ message: "Failed to delete users" }).code(500);
+            return h.response({ message: "Failed to delete user" }).code(500);
         }
     },
 };

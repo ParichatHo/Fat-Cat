@@ -260,7 +260,7 @@ async function confirmDeletePet() {
 
       <UTable ref="table" :columns="columns" :data="filteredPets" v-model:pagination="pagination" :pagination-options="{
         getPaginationRowModel: getPaginationRowModel()
-      }" class="border border-gray-300 rounded-md">
+      }" class="border border-gray-300 dark:border-gray-600 rounded-md">
         <template #actions-cell="{ row }">
           <UDropdownMenu :items="getDropdownActions(row.original)">
             <UButton icon="i-lucide-ellipsis-vertical" variant="ghost" color="neutral" />

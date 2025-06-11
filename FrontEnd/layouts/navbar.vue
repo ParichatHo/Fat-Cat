@@ -55,11 +55,6 @@ const items = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-home',
   },
   {
-    label: 'Appointment',
-    to: '/appointment',
-    icon: 'i-lucide-calendar-clock',
-  },
-  {
     label: 'Customer',
     to: '/customer',
     icon: 'i-lucide-users',

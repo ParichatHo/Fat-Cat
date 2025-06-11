@@ -189,14 +189,35 @@ const columns: TableColumn<User>[] = [
     accessorKey: 'role',
     header: 'Role',
     cell: ({ row }) => {
-      const user = row.original as User
-      return h('span', user.role.toLowerCase())
+      const role = row.original.role || 'No Role';
+      const label = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+      return h(UBadge, {
+        class: 'capitalize',
+        variant: 'subtle',
+        color: getRoleColor(role),
+      }, () => label);
     }
   },
   {
     id: 'actions',
   }
 ]
+
+// Resolve UBadge component
+const UBadge = resolveComponent('UBadge');
+
+// Function to determine badge color based on role
+type Role = 'VETERINARIAN' | 'STAFF';
+type BadgeColor = 'success' | 'info' | 'neutral' | undefined;
+
+function getRoleColor(role: string): BadgeColor {
+  const roleColors: Record<Role, BadgeColor> = {
+    VETERINARIAN: 'info',
+    STAFF: 'neutral',
+  };
+  const normalizedRole = role.toUpperCase();
+  return normalizedRole in roleColors ? roleColors[normalizedRole as Role] : 'neutral';
+}
 </script>
 
 <template>
@@ -222,21 +243,18 @@ const columns: TableColumn<User>[] = [
             <UInput :model-value="table?.tableApi?.getColumn('email')?.getFilterValue() as string" class="max-w-sm"
               placeholder="Filter emails..."
               @update:model-value="table?.tableApi?.getColumn('email')?.setFilterValue($event)" />
+
+            <UButton @click="navigateTo('/user/create')" icon="i-lucide-plus">
+              New User
+            </UButton>
           </div>
         </template>
 
         <!-- Content -->
-        <UTable
-          ref="table"
-          v-model:column-filters="columnFilters"
-          :data="users"
-          :columns="columns"
-          v-model:pagination="pagination"
-          :pagination-options="{
+        <UTable ref="table" v-model:column-filters="columnFilters" :data="users" :columns="columns"
+          v-model:pagination="pagination" :pagination-options="{
             getPaginationRowModel: getPaginationRowModel()
-          }"
-          class="border border-gray-300 dark:border-gray-600 rounded-md"
-        >
+          }" class="border border-gray-300 dark:border-gray-600 rounded-md">
           <template #actions-cell="{ row }">
             <UDropdownMenu :items="getDropdownActions(row.original)" @select="onDropdownSelect">
               <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" aria-label="Actions" />
@@ -247,13 +265,9 @@ const columns: TableColumn<User>[] = [
         <!-- Footer with pagination and showing text -->
         <div class="flex items-center justify-between pt-4 w-full px-0">
           <span class="text-sm text-gray-600 pl-0">{{ showingText }}</span>
-          <UPagination
-            :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-            :total="users.length"
-            @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-            class="pr-0"
-          />
+          <UPagination :default-page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+            :items-per-page="table?.tableApi?.getState().pagination.pageSize" :total="users.length"
+            @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)" class="pr-0" />
         </div>
       </UCard>
     </div>

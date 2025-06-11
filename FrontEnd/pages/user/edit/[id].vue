@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem } from '@nuxt/ui'
 import { navigateTo, useRoute } from '#app'
@@ -31,7 +31,11 @@ const form = ref({
     email: '',
     role: undefined as SelectOption<string> | undefined,
     password: '',
-    image_url: ''
+    image_url: '',
+    // Veterinarian specific fields
+    license_number: '',
+    experience: '',
+    education: ''
 })
 
 const loading = ref(false)
@@ -42,6 +46,11 @@ const errors = ref<Record<string, string>>({})
 const imageFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
 const phoneTouched = ref(false) // Track if phone field has been interacted with
+
+// Computed property to check if selected role is veterinarian
+const isVeterinarian = computed(() => {
+    return form.value.role?.value === 'VETERINARIAN'
+})
 
 onMounted(async () => {
     token.value = localStorage.getItem('authToken')
@@ -63,6 +72,11 @@ onMounted(async () => {
             email: string
             role: 'VETERINARIAN' | 'STAFF'
             image_url?: string
+            veterinarian?: {
+                license_number: string
+                experience: number
+                education: string
+            }
         }>(`http://localhost:3001/users/${userId}`, {
             headers: { Authorization: `Bearer ${token.value}` }
         })
@@ -79,7 +93,11 @@ onMounted(async () => {
             email: userData.email,
             role: roleOptions.find(opt => opt.value === userData.role),
             password: '',
-            image_url: userData.image_url || ''
+            image_url: userData.image_url || '',
+            // Veterinarian specific fields - แก้ไขให้ดึงจาก veterinarian object
+            license_number: userData.veterinarian?.license_number || '',
+            experience: userData.veterinarian?.experience?.toString() || '',
+            education: userData.veterinarian?.education || ''
         }
 
         // Set initial image preview
@@ -102,6 +120,7 @@ onMounted(async () => {
         }
     }
 })
+
 // ฟังก์ชันการจัดการหมายเลขโทรศัพท์
 const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '') // ลบตัวเลขที่ไม่ใช่ตัวเลข
@@ -151,6 +170,49 @@ const handlePhonePaste = (event: ClipboardEvent) => {
     phoneTouched.value = true
 }
 
+const handleExperienceInput = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    let value = input.value.replace(/\D/g, ''); // Remove non-numeric characters
+    // Limit to a reasonable number of digits (e.g., 3 digits for years)
+    value = value.slice(0, 3);
+    form.value.experience = value;
+    input.value = value;
+};
+
+
+const handleExperienceKeydown = (event: KeyboardEvent) => {
+    // Allow: Backspace, Delete, Tab, Escape, Enter, Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Home, End, Left, Right
+    if (
+        [8, 9, 27, 13, 46].includes(event.keyCode) ||
+        (event.keyCode === 65 && event.ctrlKey) ||
+        (event.keyCode === 67 && event.ctrlKey) ||
+        (event.keyCode === 86 && event.ctrlKey) ||
+        (event.keyCode === 88 && event.ctrlKey) ||
+        (event.keyCode >= 35 && event.keyCode <= 39)
+    ) {
+        return;
+    }
+    // Allow only numeric keys (0-9)
+    if (
+        (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) &&
+        (event.keyCode < 96 || event.keyCode > 105)
+    ) {
+        event.preventDefault();
+    }
+    // Prevent input if length is already 3 digits
+    const currentValue = form.value.experience;
+    if (currentValue.length >= 3 && ![8, 46].includes(event.keyCode)) {
+        event.preventDefault();
+    }
+};
+
+// Function to handle paste events for Experience
+const handleExperiencePaste = (event: ClipboardEvent) => {
+    event.preventDefault();
+    const paste = event.clipboardData?.getData('text') || '';
+    const digits = paste.replace(/\D/g, '').slice(0, 3); // Keep only digits, max 3
+    form.value.experience = digits;
+};
 
 function validate(): boolean {
     errors.value = {}
@@ -187,6 +249,21 @@ function validate(): boolean {
     // Validate password (only if provided)
     if (form.value.password && form.value.password.length < 6) {
         errors.value.password = 'Password must be at least 6 characters long'
+    }
+
+    // Validate veterinarian specific fields
+    if (isVeterinarian.value) {
+        if (!form.value.license_number.trim()) {
+            errors.value.license_number = 'License number is required for veterinarians'
+        }
+
+        if (!form.value.experience.trim()) {
+            errors.value.experience = 'Experience is required for veterinarians'
+        }
+
+        if (!form.value.education.trim()) {
+            errors.value.education = 'Education is required for veterinarians'
+        }
     }
 
     return Object.keys(errors.value).length === 0
@@ -242,6 +319,19 @@ function removeImage() {
     console.log('Image removed')
 }
 
+// Clear veterinarian fields when role changes to STAFF
+function handleRoleChange() {
+    if (form.value.role?.value !== 'VETERINARIAN') {
+        form.value.license_number = ''
+        form.value.experience = ''
+        form.value.education = ''
+        // Clear veterinarian field errors
+        delete errors.value.license_number
+        delete errors.value.experience
+        delete errors.value.education
+    }
+}
+
 async function submitForm() {
     phoneTouched.value = true // Ensure validation is triggered on submit
 
@@ -264,6 +354,13 @@ async function submitForm() {
         }
         if (form.value.password && form.value.password.trim()) {
             formData.append('password', form.value.password.trim())
+        }
+
+        // Add veterinarian specific fields if role is VETERINARIAN
+        if (isVeterinarian.value) {
+            formData.append('license_number', form.value.license_number.trim())
+            formData.append('experience', form.value.experience.trim())
+            formData.append('education', form.value.education.trim())
         }
 
         // Handle image file
@@ -320,7 +417,6 @@ async function submitForm() {
         loading.value = false
     }
 }
-
 </script>
 
 <template>
@@ -344,7 +440,6 @@ async function submitForm() {
                             <UInput v-model="form.phone" placeholder="Enter phone number (e.g., 0801234569)"
                                 class="w-full" @input="handlePhoneInput" @keydown="handlePhoneKeydown"
                                 @paste="handlePhonePaste" maxlength="12" type="tel" autocomplete="tel" />
-
                         </UFormField>
                         <UFormField label="Email" required class="flex-1" :error="errors.email">
                             <UInput v-model="form.email" type="email" placeholder="user@example.com" class="w-full" />
@@ -354,9 +449,32 @@ async function submitForm() {
                     <div class="flex gap-4">
                         <UFormField label="Role" required class="flex-1" :error="errors.role">
                             <USelectMenu v-model="form.role" :items="roleOptions" option-attribute="label" by="value"
-                                placeholder="Select role" class="w-full" />
+                                placeholder="Select role" class="w-full" @change="handleRoleChange" />
                         </UFormField>
+                    </div>
 
+                    <!-- Veterinarian Specific Fields -->
+                    <div v-if="isVeterinarian" class="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 class="text-lg font-medium text-blue-900 mb-3">Veterinarian Information</h3>
+
+                        <div class="flex space-x-4">
+                            <UFormField label="License Number" required :error="errors.license_number" class="flex-1">
+                                <UInput v-model="form.license_number" placeholder="Enter veterinarian license number"
+                                    class="w-full h-10" />
+                            </UFormField>
+
+                            <UFormField label="Experience (years)" required :error="errors.experience" class="flex-1">
+                                <UInput v-model="form.experience" placeholder="Enter years of experience (e.g., 5)"
+                                    class="w-full h-10" @input="handleExperienceInput"
+                                    @keydown="handleExperienceKeydown" @paste="handleExperiencePaste" maxlength="3"
+                                    type="text" autocomplete="off" />
+                            </UFormField>
+                        </div>
+
+                        <UFormField label="Education" required :error="errors.education">
+                            <UTextarea v-model="form.education" placeholder="Describe your educational background..."
+                                class="w-full" />
+                        </UFormField>
                     </div>
 
                     <div class="space-y-4">

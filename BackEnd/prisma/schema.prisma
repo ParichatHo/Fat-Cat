@@ -55,7 +55,7 @@ model Veterinarians {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
   medicalRecords MedicalRecords[]
-  user           Users            @relation("UserVeterinarian", fields: [user_id], references: [user_id])
+  user           Users            @relation("UserVeterinarian", fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model Users {
@@ -66,11 +66,11 @@ model Users {
   password     String
   phone        String
   role         UserRole
-  image_url    String? 
+  image_url    String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime?       @updatedAt
   veterinarian Veterinarians?  @relation("UserVeterinarian")
-
+  
   @@index([role])
 }
 
