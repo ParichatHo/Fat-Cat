@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem } from '@nuxt/ui'
@@ -35,6 +35,28 @@ interface Vet {
 interface Pet {
     pet_id: number;
     pet_name: string;
+    birth_date: string;
+    breed_name: string;
+    gender: string;
+    owner_id: number;
+    type_id: number;
+    image_url: string;
+    weight: number;
+    createdAt: string;
+    updatedAt: string;
+    type?: {
+        type_name: string;
+    };
+    owner?: {
+        owner_id: number;
+        first_name: string;
+        last_name: string;
+        phone: string;
+        email: string;
+        address: string;
+        createdAt: string;
+        updatedAt: string;
+    };
 }
 
 // Define error interface for better type safety
@@ -51,6 +73,8 @@ interface ApiError {
 }
 
 const petList = ref<SelectOption<number>[]>([])
+const allPets = ref<Pet[]>([]) // Store all pet data
+const selectedPet = ref<Pet | null>(null) // Store selected pet details
 const statusOptions = ref<SelectOption<string>[]>([
     { label: 'Scheduled', value: 'SCHEDULED' },
     { label: 'Completed', value: 'COMPLETED' },
@@ -79,6 +103,20 @@ const items = ref<BreadcrumbItem[]>([
     { label: 'Medical Records', icon: 'i-lucide-file-text', to: '/medicalRecord' },
     { label: 'Create New Record', icon: 'i-lucide-plus', to: '/medicalRecord/create' }
 ])
+
+// Watch for pet selection changes
+watch(() => record.value.pet_id, async (newPetId) => {
+    if (newPetId?.value) {
+        const pet = allPets.value.find(p => p.pet_id === newPetId.value)
+        if (pet) {
+            selectedPet.value = pet
+            // Fetch detailed pet information including owner
+            await fetchPetDetails(newPetId.value)
+        }
+    } else {
+        selectedPet.value = null
+    }
+})
 
 // Helper function to extract error message
 function extractErrorMessage(err: unknown): string {
@@ -152,7 +190,6 @@ onMounted(async () => {
                 record.value.vet_id = null;
             }
         } catch (vetError) {
-
             console.error('Error fetching veterinarians:', vetError);
         }
 
@@ -182,6 +219,8 @@ async function fetchPets() {
         const data = await $fetch<Pet[]>('http://localhost:3001/pets', {
             headers: { Authorization: `Bearer ${token.value}` }
         })
+        
+        allPets.value = data
         petList.value = data.map(pet => ({
             label: pet.pet_name,
             value: pet.pet_id
@@ -194,6 +233,21 @@ async function fetchPets() {
             description: 'Failed to load pets',
             color: 'error'
         })
+    }
+}
+
+async function fetchPetDetails(petId: number) {
+    try {
+        if (!token.value) return
+        
+        const data = await $fetch<Pet>(`http://localhost:3001/pets/${petId}?include=owner`, {
+            headers: { Authorization: `Bearer ${token.value}` }
+        })
+        
+        selectedPet.value = data
+        console.log('Pet details:', data)
+    } catch (err: unknown) {
+        console.error('Error fetching pet details:', err)
     }
 }
 
@@ -361,6 +415,74 @@ async function createRecord() {
     }
 }
 
+// Helper functions for displaying pet information (Enhanced from code 2)
+function formatDate(dateString: string) {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
+}
+
+function formatAge(birthDateStr?: string) {
+    if (!birthDateStr) return '-'
+    const birth = new Date(birthDateStr)
+    const today = new Date()
+
+    let years = today.getFullYear() - birth.getFullYear()
+    let months = today.getMonth() - birth.getMonth()
+    let days = today.getDate() - birth.getDate()
+
+    if (days < 0) {
+        months -= 1
+        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+        days += lastMonth.getDate()
+    }
+
+    if (months < 0) {
+        years -= 1
+        months += 12
+    }
+
+    let ageString = ''
+    if (years > 0) ageString += `${years} years`
+    if (months > 0) ageString += `${ageString ? ', ' : ''}${months} months`
+
+    if (years === 0 && months === 0 && days > 0) {
+        ageString = `${days} days`
+    }
+
+    return ageString || '0 days'
+}
+
+function calculateAge(birthDate: string) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+
+    return age;
+}
+
+function formatPhoneNumber(phone: string | undefined): string {
+    if (!phone) return 'Not provided';
+
+    // ลบอักขระที่ไม่ใช่ตัวเลข
+    const digits = phone.replace(/\D/g, '');
+
+    // ตรวจสอบว่ามีตัวเลขครบ 10 ตัวหรือไม่
+    if (digits.length !== 10) return phone; // ถ้าไม่ครบ 10 ตัว คืนค่าเดิม
+
+    // จัดรูปแบบเป็น xxx-xxx-xxxx
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
 // Get current datetime for max attribute (to prevent future dates)
 const now = new Date();
 const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T23:59`;
@@ -385,20 +507,114 @@ const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
                 <p>No pets available. Please ensure the API is running.</p>
             </div>
 
-            <div v-else>
+            <div v-else class="space-y-6">
+                <!-- Pet Selection -->
+                <UPageCard title="Pet Selection" description="Select the pet for this medical record.">
+                    <div class="space-y-4">
+                        <UFormField label="Pet" required class="w-full" :error="errors.pet_id">
+                            <USelectMenu v-model="record.pet_id" :items="petList" option-attribute="label" by="value"
+                                placeholder="Select pet" class="w-full" />
+                        </UFormField>
+                    </div>
+                </UPageCard>
+
+                <!-- Enhanced Pet Information Display (from code 2) -->
+                <div v-if="selectedPet" class="space-y-4">
+                    <UPageCard title="Pet Details" description="Information about the selected pet." spotlight
+                        spotlight-color="primary">
+                        <div class="flex flex-col h-full">
+                            <!-- แสดงรูปกับรายละเอียดข้างกัน -->
+                            <div class="flex flex-col md:flex-row gap-6 flex-1">
+                                <!-- รูปภาพ - 50% -->
+                                <div class="w-full md:w-1/2 flex-shrink-0">
+                                    <img v-if="selectedPet.image_url" 
+                                         :src="selectedPet.image_url" 
+                                         :alt="selectedPet.pet_name"
+                                         class="rounded-lg object-cover border border-gray-300 w-full h-72" />
+                                    <div v-else class="w-full h-72 flex items-center justify-center bg-gray-100 rounded-lg text-gray-500 border-2 border-dashed border-gray-300">
+                                        <div class="text-center">
+                                            <UIcon name="i-lucide-image" class="w-12 h-12 mx-auto mb-2" />
+                                            <p>No image available</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- รายละเอียด - 50% -->
+                                <div class="w-full md:w-1/2 space-y-4 text-gray-800">
+                                    <!-- ชื่อและ ID -->
+                                    <div>
+                                        <h2 class="text-2xl font-bold flex items-center gap-3 flex-wrap">
+                                            {{ selectedPet.pet_name }}
+                                            <UBadge color="primary" variant="soft" class="font-bold rounded-full">
+                                                ID: {{ selectedPet.pet_id }}
+                                            </UBadge>
+                                        </h2>
+                                    </div>
+
+                                    <!-- Grid ของข้อมูล -->
+                                    <div class="space-y-4">
+                                        <!-- Type และ Breed ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Type</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.type?.type_name || '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Breed</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.breed_name || '-' }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gender และ Owner ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Gender</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.gender || '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Owner</h3>
+                                                <p class="text-sm text-gray-600">
+                                                    {{ selectedPet.owner ? `${selectedPet.owner.first_name} ${selectedPet.owner.last_name}` : '-' }}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Birthdate และ Age ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Birthdate</h3>
+                                                <p class="text-sm text-gray-600">{{ formatDate(selectedPet.birth_date) }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Age</h3>
+                                                <p class="text-sm text-gray-600">{{ formatAge(selectedPet.birth_date) }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Weight และ Phone ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Weight</h3>
+                                                <p class="text-sm text-gray-600">
+                                                    {{ selectedPet.weight !== undefined ? `${selectedPet.weight.toFixed(1)} kg` : '-' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </UPageCard>
+                </div>
+
+                <!-- Medical Record Form -->
                 <UPageCard title="Medical Record Information"
                     description="Provide the necessary details for the new medical record.">
                     <form @submit.prevent="createRecord" class="space-y-4">
                         <!-- Visit Date with Time -->
-                        <UFormField label="Visit Date" name="visit_date" class="w-full">
+                        <UFormField label="Visit Date" name="visit_date" class="w-full" :error="errors.visit_date">
                             <UInput v-model="record.visit_date" type="datetime-local" :max="maxDateTime"
                                 class="w-full" />
-                        </UFormField>
-
-                        <!-- Pet -->
-                        <UFormField label="Pet" required class="w-full" :error="errors.pet_id">
-                            <USelectMenu v-model="record.pet_id" :items="petList" option-attribute="label" by="value"
-                                placeholder="Select pet" class="w-full" />
                         </UFormField>
 
                         <!-- Vet - Show automatically detected veterinarian -->

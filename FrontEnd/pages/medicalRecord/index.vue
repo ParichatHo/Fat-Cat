@@ -255,7 +255,10 @@ const columns: TableColumn<MedicalRecord>[] = [
     cell: ({ row }) => {
       const symptoms = row.getValue('symptoms') as string | undefined;
       if (!symptoms) return h('span', { class: 'text-gray-400' }, 'No symptoms recorded');
-      return h('div', { class: 'truncate max-w-xs', title: symptoms }, symptoms);
+      return h('div', { 
+        class: 'truncate max-w-32 overflow-hidden text-ellipsis whitespace-nowrap', 
+        title: symptoms 
+      }, symptoms);
     },
   },
   {
@@ -273,7 +276,10 @@ const columns: TableColumn<MedicalRecord>[] = [
     cell: ({ row }) => {
       const treatment = row.getValue('treatment') as string | undefined;
       if (!treatment) return h('span', { class: 'text-gray-400' }, 'No treatment recorded');
-      return h('div', { class: 'truncate max-w-xs', title: treatment }, treatment);
+      return h('div', { 
+        class: 'truncate max-w-32 overflow-hidden text-ellipsis whitespace-nowrap', 
+        title: treatment 
+      }, treatment);
     },
   },
   {

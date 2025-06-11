@@ -84,25 +84,25 @@ const activeTab = ref<string>('visit'); // Track the active tab
 const tabs = [
   {
     key: 'visit',
-    label: 'Visit Information',
+    label: 'Visit Info',
     description: 'General information about this medical visit.',
     icon: 'i-lucide-calendar',
   },
   {
     key: 'pet',
-    label: 'Pet Information',
+    label: 'Pet Info',
     description: 'Details about the pet for this medical record.',
     icon: 'i-lucide-paw-print',
   },
   {
     key: 'owner',
-    label: 'Owner Information',
+    label: 'Owner Info',
     description: 'Information about the pet owner.',
     icon: 'i-lucide-user-circle',
   },
   {
     key: 'vet',
-    label: 'Veterinarian Information',
+    label: 'Veterinarian Info',
     description: 'Information about the attending veterinarian.',
     icon: 'i-lucide-user',
   },
@@ -114,7 +114,7 @@ const tabs = [
   },
   {
     key: 'record',
-    label: 'Record Information',
+    label: 'Record Info',
     description: 'Information about when this record was created and updated.',
     icon: 'i-lucide-info',
   },
@@ -242,7 +242,7 @@ function calculateAge(birthDate: string) {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto p-6">
+  <div class="max-w-4xl mx-auto p-6">
     <div class="space-y-6">
       <h1 class="text-xl font-semibold text-gray-900 mb-5">Medical Record Details</h1>
       <div class="flex justify-between items-center">

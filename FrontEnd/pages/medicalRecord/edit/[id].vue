@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import type { BreadcrumbItem } from '@nuxt/ui'
-import axios from 'axios' // Add axios for /user/info request
+import axios from 'axios'
 
 definePageMeta({
     layout: 'navbar2',
@@ -36,6 +36,28 @@ interface Vet {
 interface Pet {
     pet_id: number;
     pet_name: string;
+    birth_date: string;
+    breed_name: string;
+    gender: string;
+    owner_id: number;
+    type_id: number;
+    image_url: string;
+    weight: number;
+    createdAt: string;
+    updatedAt: string;
+    type?: {
+        type_name: string;
+    };
+    owner?: {
+        owner_id: number;
+        first_name: string;
+        last_name: string;
+        phone: string;
+        email: string;
+        address: string;
+        createdAt: string;
+        updatedAt: string;
+    };
 }
 
 interface MedicalRecord {
@@ -54,7 +76,22 @@ interface MedicalRecord {
     vet: Vet;
 }
 
+// Define error interface for better type safety
+interface ApiError {
+    message?: string;
+    data?: {
+        message?: string;
+    };
+    response?: {
+        data?: {
+            message?: string;
+        };
+    };
+}
+
 const petList = ref<SelectOption<number>[]>([])
+const allPets = ref<Pet[]>([]) // Store all pet data
+const selectedPet = ref<Pet | null>(null) // Store selected pet details
 const statusOptions = ref<SelectOption<string>[]>([
     { label: 'Scheduled', value: 'SCHEDULED' },
     { label: 'Completed', value: 'COMPLETED' },
@@ -63,7 +100,7 @@ const statusOptions = ref<SelectOption<string>[]>([
 const vetName = ref<string>('') // Store veterinarian name from /user/info
 const record = ref({
     pet_id: undefined as SelectOption<number> | undefined,
-    vet_id: undefined as number | undefined, // Store vet_id directly as a number
+    vet_id: undefined as number | undefined,
     visit_date: '',
     symptoms: '',
     diagnosis: '',
@@ -83,12 +120,42 @@ const items = ref<BreadcrumbItem[]>([
     { label: 'Edit Record', icon: 'i-lucide-edit', to: `/medicalRecord/edit/${route.params.id}` }
 ])
 
+// Watch for pet selection changes
+watch(() => record.value.pet_id, async (newPetId) => {
+    if (newPetId?.value) {
+        const pet = allPets.value.find(p => p.pet_id === newPetId.value)
+        if (pet) {
+            selectedPet.value = pet
+            // Fetch detailed pet information including owner
+            await fetchPetDetails(newPetId.value)
+        }
+    } else {
+        selectedPet.value = null
+    }
+})
+
+// Helper function to extract error message
+function extractErrorMessage(err: unknown): string {
+    if (err && typeof err === 'object') {
+        const apiError = err as ApiError;
+        return apiError.data?.message ||
+            apiError.response?.data?.message ||
+            apiError.message ||
+            'An unknown error occurred';
+    }
+    if (typeof err === 'string') {
+        return err;
+    }
+    return 'An unknown error occurred';
+}
+
 onMounted(async () => {
     token.value = localStorage.getItem('authToken');
     if (!token.value) {
         toast.add({ title: 'Please log in to continue', color: 'error' });
         return navigateTo('/login');
     }
+    
     try {
         // Fetch user info first to get veterinarian name
         const userData = localStorage.getItem('user');
@@ -96,6 +163,7 @@ onMounted(async () => {
         if (!email) {
             throw new Error('User email not found');
         }
+        
         const userResponse = await axios.post(
             'http://localhost:3001/user/info',
             { email },
@@ -106,37 +174,63 @@ onMounted(async () => {
                 },
             }
         );
+        
         vetName.value = userResponse.data.full_name || 'Unknown Veterinarian';
 
-        // Fetch pets and record (skip fetchVets since we don't need the dropdown)
-        await Promise.all([fetchPets()]).then(fetchRecord);
-    } catch (err: any) {
+        // Fetch pets first, then record
+        await fetchPets();
+        await fetchRecord();
+    } catch (err: unknown) {
         console.error('Error in onMounted:', err);
-        error.value = err.message || 'Failed to initialize data';
+        const errorMessage = extractErrorMessage(err);
+        error.value = errorMessage;
         toast.add({
             title: 'Error',
-            description: error.value ?? 'Failed to load pets', // Use fallback
+            description: errorMessage,
             color: 'error'
-        })
+        });
     }
 });
 
 async function fetchPets() {
     try {
+        // Add null check for token
+        if (!token.value) {
+            throw new Error('Authentication token not available');
+        }
+
         const data = await $fetch<Pet[]>('http://localhost:3001/pets', {
             headers: { Authorization: `Bearer ${token.value}` }
         })
+        
+        allPets.value = data
         petList.value = data.map(pet => ({
             label: pet.pet_name,
             value: pet.pet_id
         }))
-    } catch (err: any) {
+        console.log('Pets data:', petList.value)
+    } catch (err: unknown) {
         console.error('Error fetching pets:', err)
         toast.add({
             title: 'Error',
             description: 'Failed to load pets',
             color: 'error'
         })
+    }
+}
+
+async function fetchPetDetails(petId: number) {
+    try {
+        if (!token.value) return
+        
+        const data = await $fetch<Pet>(`http://localhost:3001/pets/${petId}?include=owner`, {
+            headers: { Authorization: `Bearer ${token.value}` }
+        })
+        
+        selectedPet.value = data
+        console.log('Pet details:', data)
+    } catch (err: unknown) {
+        console.error('Error fetching pet details:', err)
     }
 }
 
@@ -179,8 +273,8 @@ async function fetchRecord() {
 
         record.value = {
             pet_id: petOption,
-            vet_id: data.vet_id, // Set vet_id directly
-            visit_date: formatDateTimeForInput(data.visit_date), // เปลี่ยนให้ใช้ formatDateTimeForInput
+            vet_id: data.vet_id,
+            visit_date: formatDateTimeForInput(data.visit_date),
             symptoms: data.symptoms || '',
             diagnosis: data.diagnosis || '',
             treatment: data.treatment || '',
@@ -188,6 +282,15 @@ async function fetchRecord() {
             notes: data.notes || '',
             appointment_date: formatDateTimeForInput(data.appointment_date),
             status: statusOption
+        }
+
+        // Set selected pet and fetch details
+        if (data.pet_id) {
+            const pet = allPets.value.find(p => p.pet_id === data.pet_id)
+            if (pet) {
+                selectedPet.value = pet
+                await fetchPetDetails(data.pet_id)
+            }
         }
 
     } catch (err: any) {
@@ -217,7 +320,7 @@ function validate(): boolean {
         errors.value.pet_id = 'Pet selection is required';
     }
 
-    if (!record.value.vet_id) { // Validate vet_id directly
+    if (!record.value.vet_id) {
         errors.value.vet_id = 'Veterinarian is required';
     }
 
@@ -244,10 +347,6 @@ function validate(): boolean {
         }
     }
 
-    if (record.value.symptoms && record.value.symptoms.trim() === '') {
-        errors.value.symptoms = 'Symptoms cannot be empty if provided';
-    }
-
     return Object.keys(errors.value).length === 0;
 }
 
@@ -267,7 +366,6 @@ async function updateRecord() {
     try {
         let visitDateTime: string;
         try {
-            // ปรับการแปลง visit_date ให้รองรับทั้ง date และ datetime
             visitDateTime = new Date(record.value.visit_date).toISOString();
         } catch (dateError) {
             throw new Error('Invalid visit date format');
@@ -284,7 +382,7 @@ async function updateRecord() {
 
         const payload = {
             pet_id: record.value.pet_id?.value,
-            vet_id: record.value.vet_id, // Use vet_id directly
+            vet_id: record.value.vet_id,
             visit_date: visitDateTime,
             symptoms: record.value.symptoms || '',
             diagnosis: record.value.diagnosis || '',
@@ -321,7 +419,8 @@ async function updateRecord() {
         router.push('/medicalRecord')
     } catch (err: any) {
         console.error('Error updating record:', err);
-        error.value = err?.data?.message || err.message || 'Failed to update medical record'
+        const errorMessage = extractErrorMessage(err);
+        error.value = errorMessage;
         toast.add({
             title: 'Update Failed',
             description: error.value ?? 'Unknown error occurred',
@@ -347,7 +446,6 @@ function formatDateTimeForInput(dateString: string | null | undefined): string {
             return '';
         }
         
-        // ใช้ local time สำหรับ datetime-local input
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -361,10 +459,61 @@ function formatDateTimeForInput(dateString: string | null | undefined): string {
     }
 }
 
-// สร้าง max datetime สำหรับ visit date (วันและเวลาปัจจุบัน)
-const now = new Date();
-const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+// Helper functions for displaying pet information
+function formatDate(dateString: string) {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
+}
 
+function formatAge(birthDateStr?: string) {
+    if (!birthDateStr) return '-'
+    const birth = new Date(birthDateStr)
+    const today = new Date()
+
+    let years = today.getFullYear() - birth.getFullYear()
+    let months = today.getMonth() - birth.getMonth()
+    let days = today.getDate() - birth.getDate()
+
+    if (days < 0) {
+        months -= 1
+        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+        days += lastMonth.getDate()
+    }
+
+    if (months < 0) {
+        years -= 1
+        months += 12
+    }
+
+    let ageString = ''
+    if (years > 0) ageString += `${years} years`
+    if (months > 0) ageString += `${ageString ? ', ' : ''}${months} months`
+
+    if (years === 0 && months === 0 && days > 0) {
+        ageString = `${days} days`
+    }
+
+    return ageString || '0 days'
+}
+
+function formatPhoneNumber(phone: string | undefined): string {
+    if (!phone) return 'Not provided';
+
+    const digits = phone.replace(/\D/g, '');
+
+    if (digits.length !== 10) return phone;
+
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+// Get current datetime for max attribute (to prevent future dates)
+const now = new Date();
+const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T23:59`;
 </script>
 
 <template>
@@ -406,20 +555,113 @@ const maxDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
                 <p>No pets available. Please ensure the API is running.</p>
             </div>
 
-            <div v-else-if="!loading && !error">
-                <UPageCard title="Edit Medical Record Information"
-                    description="Update the details for the medical record.">
-                    <form @submit.prevent="updateRecord" class="space-y-4">
-
-                        <!-- Visit Date with Time -->
-                        <UFormField label="Visit Date & Time" required class="w-full" :error="errors.visit_date">
-                            <UInput v-model="record.visit_date" type="datetime-local" :max="maxDateTime" class="w-full" />
-                        </UFormField>
-
-                        <!-- Pet -->
+            <div v-else-if="!loading && !error" class="space-y-6">
+                <!-- Pet Selection -->
+                <UPageCard title="Pet Selection" description="Select the pet for this medical record.">
+                    <div class="space-y-4">
                         <UFormField label="Pet" required class="w-full" :error="errors.pet_id">
                             <USelectMenu v-model="record.pet_id" :items="petList" option-attribute="label" by="value"
                                 placeholder="Select pet" class="w-full" />
+                        </UFormField>
+                    </div>
+                </UPageCard>
+
+                <!-- Enhanced Pet Information Display -->
+                <div v-if="selectedPet" class="space-y-4">
+                    <UPageCard title="Pet Details" description="Information about the selected pet." spotlight
+                        spotlight-color="primary">
+                        <div class="flex flex-col h-full">
+                            <!-- แสดงรูปกับรายละเอียดข้างกัน -->
+                            <div class="flex flex-col md:flex-row gap-6 flex-1">
+                                <!-- รูปภาพ - 50% -->
+                                <div class="w-full md:w-1/2 flex-shrink-0">
+                                    <img v-if="selectedPet.image_url" 
+                                         :src="selectedPet.image_url" 
+                                         :alt="selectedPet.pet_name"
+                                         class="rounded-lg object-cover border border-gray-300 w-full h-72" />
+                                    <div v-else class="w-full h-72 flex items-center justify-center bg-gray-100 rounded-lg text-gray-500 border-2 border-dashed border-gray-300">
+                                        <div class="text-center">
+                                            <UIcon name="i-lucide-image" class="w-12 h-12 mx-auto mb-2" />
+                                            <p>No image available</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- รายละเอียด - 50% -->
+                                <div class="w-full md:w-1/2 space-y-4 text-gray-800">
+                                    <!-- ชื่อและ ID -->
+                                    <div>
+                                        <h2 class="text-2xl font-bold flex items-center gap-3 flex-wrap">
+                                            {{ selectedPet.pet_name }}
+                                            <UBadge color="primary" variant="soft" class="font-bold rounded-full">
+                                                ID: {{ selectedPet.pet_id }}
+                                            </UBadge>
+                                        </h2>
+                                    </div>
+
+                                    <!-- Grid ของข้อมูล -->
+                                    <div class="space-y-4">
+                                        <!-- Type และ Breed ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Type</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.type?.type_name || '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Breed</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.breed_name || '-' }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gender และ Owner ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Gender</h3>
+                                                <p class="text-sm text-gray-600">{{ selectedPet.gender || '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Owner</h3>
+                                                <p class="text-sm text-gray-600">
+                                                    {{ selectedPet.owner ? `${selectedPet.owner.first_name} ${selectedPet.owner.last_name}` : '-' }}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Birthdate และ Age ในแถวเดียวกัน -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Birthdate</h3>
+                                                <p class="text-sm text-gray-600">{{ formatDate(selectedPet.birth_date) }}</p>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Age</h3>
+                                                <p class="text-sm text-gray-600">{{ formatAge(selectedPet.birth_date) }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Weight -->
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <h3 class="font-semibold mb-1">Weight</h3>
+                                                <p class="text-sm text-gray-600">
+                                                    {{ selectedPet.weight !== undefined ? `${selectedPet.weight.toFixed(1)} kg` : '-' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </UPageCard>
+                </div>
+
+                <!-- Medical Record Form -->
+                <UPageCard title="Edit Medical Record Information"
+                    description="Update the details for the medical record.">
+                    <form @submit.prevent="updateRecord" class="space-y-4">
+                        <!-- Visit Date with Time -->
+                        <UFormField label="Visit Date & Time" required class="w-full" :error="errors.visit_date">
+                            <UInput v-model="record.visit_date" type="datetime-local" :max="maxDateTime" class="w-full" />
                         </UFormField>
 
                         <!-- Vet -->
