@@ -54,11 +54,11 @@ onMounted(async () => {
 
 // เมนูนำทาง
 const items = computed<NavigationMenuItem[]>(() => [
-  {
-    label: 'Home',
-    to: '/getting-started',
-    icon: 'i-lucide-home',
-  },
+  // {
+  //   label: 'Home',
+  //   to: '/getting-started',
+  //   icon: 'i-lucide-home',
+  // },
   {
     label: 'Medical Record',
     to: '/medicalRecord',

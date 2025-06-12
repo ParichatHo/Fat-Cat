@@ -54,20 +54,20 @@ onMounted(async () => {
 
 // เมนูนำทาง
 const items = computed<NavigationMenuItem[]>(() => [
+  // {
+  //   label: 'Home',
+  //   to: '/getting-started',
+  //   icon: 'i-lucide-home',
+  // },  
   {
-    label: 'Home',
-    to: '/getting-started',
-    icon: 'i-lucide-home',
+    label: 'Pet',
+    to: '/pet',
+    icon: 'i-lucide-paw-print',
   },
   {
     label: 'Customer',
     to: '/customer',
     icon: 'i-lucide-users',
-  },
-  {
-    label: 'Pet',
-    to: '/pet',
-    icon: 'i-lucide-paw-print',
   },
   {
     label: 'User',

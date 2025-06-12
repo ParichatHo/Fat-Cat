@@ -294,6 +294,30 @@ const deleteUser = async (user_id) => {
     });
 };
 
+const changePassword = async (user_id, newPassword) => {
+    if (!newPassword) {
+        throw new Error("New password is required");
+    }
+
+    if (newPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Update password in database
+    const updatedUser = await prisma.users.update({
+        where: { user_id: Number(user_id) },
+        data: { 
+            password: hashedPassword,
+            updatedAt: new Date()
+        }
+    });
+
+    return updatedUser;
+};
+
 module.exports = {
     getUserByEmail,
     comparePassword,
@@ -302,4 +326,5 @@ module.exports = {
     createUser,
     updateUser,
     deleteUser,
+    changePassword,
 };

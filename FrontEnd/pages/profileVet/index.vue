@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import axios from 'axios'
-import type { BreadcrumbItem } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'navbar2',
@@ -70,7 +69,7 @@ onMounted(async () => {
         },
       }
     )
-    
+
     // แปลงข้อมูลจาก API response ให้ตรงกับ User type
     user.value = {
       user_id: response.data.user_id || response.data.id,
@@ -83,7 +82,7 @@ onMounted(async () => {
       image_url: response.data.image_url,
       veterinarian: response.data.veterinarian
     }
-    
+
     console.log('Profile data:', user.value) // Debug log
   } catch (err: any) {
     error.value = err?.response?.data?.message || err.message || 'Failed to load profile'
@@ -106,9 +105,7 @@ const formatPhoneNumber = (phone: string) => {
   return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`
 }
 
-const editProfile = () => {
-  router.push('/profile/edit')
-}
+
 </script>
 
 <template>
@@ -125,15 +122,16 @@ const editProfile = () => {
       <div v-else-if="error" class="text-red-600 text-center">{{ error }}</div>
 
       <div v-else-if="user">
-        <UPageCard title="Profile Information" description="Your personal and professional information." orientation="vertical"
-          spotlight spotlight-color="primary">
+        <UPageCard title="Profile Information" description="Your personal and professional information."
+          orientation="vertical" spotlight spotlight-color="primary">
           <div class="space-y-8">
             <!-- Profile Section -->
             <div class="flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
               <!-- Profile Image -->
               <div class="flex-shrink-0 lg:w-80">
                 <div class="relative">
-                  <img :src="user.image_url || '/default-user.png'" :alt="user.full_name || `${user.first_name} ${user.last_name}`"
+                  <img :src="user.image_url || '/default-user.png'"
+                    :alt="user.full_name || `${user.first_name} ${user.last_name}`"
                     class="rounded-xl object-cover border border-gray-200 shadow-sm w-full h-80" />
                   <!-- Optional: Add camera icon for image upload -->
                   <!-- <button class="absolute bottom-3 right-3 p-2 bg-primary-500 text-white rounded-full shadow-lg hover:bg-primary-600 transition-colors">
@@ -155,7 +153,7 @@ const editProfile = () => {
                     </UBadge>
                   </div>
                 </div>
-                
+
                 <!-- Basic Info Grid -->
                 <div class="space-y-6">
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -178,16 +176,10 @@ const editProfile = () => {
                     <div class="space-y-1 md:col-span-2">
                       <label class="text-sm font-medium text-gray-500 uppercase tracking-wider">Role</label>
                       <div class="flex items-center gap-2">
-                        <UBadge 
-                          :color="user.role === 'VETERINARIAN' ? 'info' : 'neutral'" 
-                          variant="subtle" 
-                          size="md"
-                          class="font-medium"
-                        >
-                          <UIcon 
-                            :name="user.role === 'VETERINARIAN' ? 'i-lucide-stethoscope' : 'i-lucide-user'" 
-                            class="w-4 h-4 mr-1" 
-                          />
+                        <UBadge :color="user.role === 'VETERINARIAN' ? 'info' : 'neutral'" variant="subtle" size="md"
+                          class="font-medium">
+                          <UIcon :name="user.role === 'VETERINARIAN' ? 'i-lucide-stethoscope' : 'i-lucide-user'"
+                            class="w-4 h-4 mr-1" />
                           {{ user.role === 'VETERINARIAN' ? 'Veterinarian' : user.role === 'STAFF' ? 'Staff' : '-' }}
                         </UBadge>
                       </div>
@@ -210,7 +202,7 @@ const editProfile = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <div class="space-y-1">
                   <label class="text-sm font-medium text-gray-500 uppercase tracking-wider">Vet ID</label>
@@ -238,12 +230,8 @@ const editProfile = () => {
               <div class="text-center py-8">
                 <UIcon name="i-lucide-info" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p class="text-gray-600 mb-4">No veterinarian information available.</p>
-                <UButton 
-                  @click="router.push('/profile/edit?section=professional')" 
-                  color="primary" 
-                  variant="outline"
-                  icon="i-lucide-plus"
-                >
+                <UButton @click="router.push('/profile/edit?section=professional')" color="primary" variant="outline"
+                  icon="i-lucide-plus">
                   Add Professional Information
                 </UButton>
               </div>
@@ -253,31 +241,16 @@ const editProfile = () => {
             <div class="border-t border-gray-200 pt-4">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <UButton 
-                  @click="router.push('/profile/edit')" 
-                  color="neutral" 
-                  variant="outline" 
-                  block
-                  icon="i-lucide-edit"
-                >
+                <UButton @click="router.push('/profileVet/edit')" color="neutral" variant="outline" block
+                  icon="i-lucide-edit">
                   Edit Profile
                 </UButton>
-                <UButton 
-                  @click="router.push('/profile/change-password')" 
-                  color="neutral" 
-                  variant="outline" 
-                  block
-                  icon="i-lucide-key"
-                >
+                <UButton @click="router.push('/profileVet/change-password')" color="neutral" variant="outline" block
+                  icon="i-lucide-key">
                   Change Password
                 </UButton>
-                <UButton 
-                  @click="router.push('/profile/settings')" 
-                  color="neutral" 
-                  variant="outline" 
-                  block
-                  icon="i-lucide-settings"
-                >
+                <UButton @click="router.push('/profileVet')" color="neutral" variant="outline" block
+                  icon="i-lucide-settings">
                   Account Settings
                 </UButton>
               </div>
