@@ -160,7 +160,7 @@ async function logout() {
 <template>
   <UHeader toggle-side="left">
     <template #title>
-      <img src="~/assets/img/logo5.png" alt="Logo" class="w-auto h-23 mt-1" />
+      <img src="~/assets/img/logo7.png" alt="Logo" class="w-auto h-22" />
     </template>
 
     <UNavigationMenu :items="items" />

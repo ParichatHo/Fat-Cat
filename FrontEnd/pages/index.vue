@@ -74,16 +74,16 @@ type Schema = z.output<typeof schema>;
   <div class="flex items-center justify-center min-h-screen p-4">
     <UPageCard class="w-full max-w-md">
       <UAuthForm :schema="schema" :fields="fields" title="Login" icon="i-lucide-user" @submit="onSubmit">
-        <template #description>
+        <!-- <template #description>
           Don't have an account?
           <ULink to="/auth/register" class="text-primary font-medium">Sign up</ULink>.
-        </template>
+        </template> -->
         <template #password-hint>
-          <ULink to="/auth/forgot-password" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
+          <ULink to="/" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
         </template>
         <template #footer>
           By signing in, you agree to our
-          <ULink to="/terms" class="text-primary font-medium">Terms of Service</ULink>.
+          <ULink to="/" class="text-primary font-medium">Terms of Service</ULink>.
         </template>
       </UAuthForm>
     </UPageCard>
